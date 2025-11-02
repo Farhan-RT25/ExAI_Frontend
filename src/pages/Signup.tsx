@@ -4,9 +4,10 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Link, useNavigate } from "react-router-dom";
-import { Mail, Eye, EyeOff } from "lucide-react";
+import { Mail, Eye, EyeOff, Sparkles, Star } from "lucide-react";
 import { useOnboarding } from "@/contexts/OnboardingContext";
 import { useToast } from "@/hooks/use-toast";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 const Signup = () => {
   const navigate = useNavigate();
@@ -74,95 +75,137 @@ const Signup = () => {
   const passwordStrength = password ? getPasswordStrength(password) : null;
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-md p-8 shadow-card-hover">
-        <div className="flex justify-center mb-6">
-          <div className="p-3 bg-gradient-primary rounded-xl">
-            <Mail className="h-8 w-8 text-primary-foreground" />
-          </div>
+    <div className="min-h-screen flex bg-background">
+      {/* Left Side - Hero */}
+      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-primary via-primary-dark to-[hsl(250,80%,55%)] p-12 flex-col justify-between text-primary-foreground relative overflow-hidden">
+        {/* Decorative elements */}
+        <div className="absolute top-20 left-16 animate-float">
+          <Sparkles className="h-8 w-8 opacity-80" />
+        </div>
+        <div className="absolute top-32 left-24 animate-float" style={{ animationDelay: '1s' }}>
+          <div className="w-2 h-2 bg-primary-foreground rounded-full opacity-60" />
+        </div>
+        <div className="absolute bottom-1/3 right-20 animate-float" style={{ animationDelay: '0.5s' }}>
+          <Sparkles className="h-6 w-6 opacity-70" />
         </div>
         
-        <h1 className="text-3xl font-bold text-center mb-2">Get Started Free</h1>
-        <p className="text-muted-foreground text-center mb-8">Create your Ex AI account</p>
-        
-        <form onSubmit={handleSubmit} className="space-y-4 mb-6">
-          <div>
-            <Label htmlFor="fullName">Full Name</Label>
-            <Input
-              id="fullName"
-              type="text"
-              placeholder="Enter your full name"
-              value={fullName}
-              onChange={(e) => setFullNameLocal(e.target.value)}
-              className={errors.fullName ? "border-danger" : ""}
-            />
-            {errors.fullName && (
-              <p className="text-sm text-danger mt-1">{errors.fullName}</p>
-            )}
-          </div>
+        {/* Content */}
+        <div className="relative z-10">
+          <h1 className="text-5xl font-bold mb-6 leading-tight">
+            Start turning your ideas into reality.
+          </h1>
+          <p className="text-lg text-primary-foreground/90 max-w-md">
+            Create a free account and get full access to all features for 30-days. No credit card needed. Trusted by over 4,000 professionals.
+          </p>
+        </div>
 
-          <div>
-            <Label htmlFor="email">Email Address</Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="Enter your email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className={errors.email ? "border-danger" : ""}
-            />
-            {errors.email && (
-              <p className="text-sm text-danger mt-1">{errors.email}</p>
-            )}
-          </div>
-
-          <div>
-            <Label htmlFor="password">Password</Label>
-            <div className="relative">
-              <Input
-                id="password"
-                type={showPassword ? "text" : "password"}
-                placeholder="Enter your password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className={errors.password ? "border-danger pr-10" : "pr-10"}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-              >
-                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </button>
+        {/* Social Proof */}
+        <div className="relative z-10">
+          <div className="flex items-center gap-4">
+            <div className="flex -space-x-2">
+              <Avatar className="border-2 border-primary w-10 h-10">
+                <AvatarFallback className="bg-teal text-teal-foreground text-sm">JD</AvatarFallback>
+              </Avatar>
+              <Avatar className="border-2 border-primary w-10 h-10">
+                <AvatarFallback className="bg-info text-info-foreground text-sm">SM</AvatarFallback>
+              </Avatar>
+              <Avatar className="border-2 border-primary w-10 h-10">
+                <AvatarFallback className="bg-warning text-warning-foreground text-sm">AL</AvatarFallback>
+              </Avatar>
+              <Avatar className="border-2 border-primary w-10 h-10">
+                <AvatarFallback className="bg-success text-success-foreground text-sm">KW</AvatarFallback>
+              </Avatar>
             </div>
-            {errors.password && (
-              <p className="text-sm text-danger mt-1">{errors.password}</p>
-            )}
-            {password && passwordStrength && (
-              <p className={`text-sm mt-1 ${passwordStrength.color}`}>
-                Password strength: {passwordStrength.strength}
-              </p>
-            )}
-          </div>
-
-          <Button type="submit" className="w-full h-12 text-base">
-            Create Account
-          </Button>
-        </form>
-
-        <div className="relative mb-6">
-          <div className="absolute inset-0 flex items-center">
-            <span className="w-full border-t" />
-          </div>
-          <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-card px-2 text-muted-foreground">OR</span>
+            <div>
+              <div className="flex gap-0.5 mb-1">
+                {[...Array(5)].map((_, i) => (
+                  <Star key={i} className="h-4 w-4 fill-primary-foreground text-primary-foreground" />
+                ))}
+              </div>
+              <p className="text-sm text-primary-foreground/80">5.0 from 200+ reviews</p>
+            </div>
           </div>
         </div>
+      </div>
 
-        <div className="space-y-3">
+      {/* Right Side - Form */}
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-8">
+        <Card className="w-full max-w-md p-8 border-border shadow-card">
+          <div className="flex justify-center mb-6">
+            <div className="p-2 bg-primary/10 rounded-lg">
+              <Mail className="h-6 w-6 text-primary" />
+            </div>
+          </div>
+          
+          <h1 className="text-2xl font-bold text-center mb-2">Sign up</h1>
+          <p className="text-sm text-muted-foreground text-center mb-8">Start your 30-day free trial.</p>
+          
+          <form onSubmit={handleSubmit} className="space-y-4 mb-6">
+            <div>
+              <Label htmlFor="fullName" className="text-sm font-medium">Name*</Label>
+              <Input
+                id="fullName"
+                type="text"
+                placeholder="Enter your name"
+                value={fullName}
+                onChange={(e) => setFullNameLocal(e.target.value)}
+                className={`mt-1.5 ${errors.fullName ? "border-danger" : ""}`}
+              />
+              {errors.fullName && (
+                <p className="text-xs text-danger mt-1">{errors.fullName}</p>
+              )}
+            </div>
+
+            <div>
+              <Label htmlFor="email" className="text-sm font-medium">Email*</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="Enter your email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className={`mt-1.5 ${errors.email ? "border-danger" : ""}`}
+              />
+              {errors.email && (
+                <p className="text-xs text-danger mt-1">{errors.email}</p>
+              )}
+            </div>
+
+            <div>
+              <Label htmlFor="password" className="text-sm font-medium">Password*</Label>
+              <div className="relative mt-1.5">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Create a password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className={`${errors.password ? "border-danger pr-10" : "pr-10"}`}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+              {errors.password && (
+                <p className="text-xs text-danger mt-1">{errors.password}</p>
+              )}
+              {password && !errors.password && (
+                <p className="text-xs text-muted-foreground mt-1">Must be at least 8 characters.</p>
+              )}
+            </div>
+
+            <Button type="submit" className="w-full h-11 text-base bg-primary hover:bg-primary-dark">
+              Create account
+            </Button>
+          </form>
+
           <Button 
             variant="outline" 
-            className="w-full h-12 text-base"
+            className="w-full h-11 text-base"
             onClick={() => handleOAuthSignup("Google")}
             type="button"
           >
@@ -172,42 +215,44 @@ const Signup = () => {
               <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
               <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
             </svg>
-            Continue with Google
+            Sign up with Google
           </Button>
+
+          <div className="mt-4 space-y-3">
+            <Button 
+              variant="outline" 
+              className="w-full h-11 text-base"
+              onClick={() => handleOAuthSignup("Microsoft")}
+              type="button"
+            >
+              <svg className="mr-2 h-5 w-5" viewBox="0 0 24 24">
+                <path fill="#F25022" d="M1 1h10v10H1z"/>
+                <path fill="#00A4EF" d="M13 1h10v10H13z"/>
+                <path fill="#7FBA00" d="M1 13h10v10H1z"/>
+                <path fill="#FFB900" d="M13 13h10v10H13z"/>
+              </svg>
+              Continue with Microsoft
+            </Button>
+            
+            <Button 
+              variant="outline" 
+              className="w-full h-11 text-base"
+              onClick={() => handleOAuthSignup("Zoho")}
+              type="button"
+            >
+              <Mail className="mr-2 h-5 w-5" />
+              Continue with Zoho
+            </Button>
+          </div>
           
-          <Button 
-            variant="outline" 
-            className="w-full h-12 text-base"
-            onClick={() => handleOAuthSignup("Microsoft")}
-            type="button"
-          >
-            <svg className="mr-2 h-5 w-5" viewBox="0 0 24 24">
-              <path fill="#F25022" d="M1 1h10v10H1z"/>
-              <path fill="#00A4EF" d="M13 1h10v10H13z"/>
-              <path fill="#7FBA00" d="M1 13h10v10H1z"/>
-              <path fill="#FFB900" d="M13 13h10v10H13z"/>
-            </svg>
-            Continue with Microsoft
-          </Button>
-          
-          <Button 
-            variant="outline" 
-            className="w-full h-12 text-base"
-            onClick={() => handleOAuthSignup("Zoho")}
-            type="button"
-          >
-            <Mail className="mr-2 h-5 w-5" />
-            Continue with Zoho
-          </Button>
-        </div>
-        
-        <p className="text-center mt-6 text-sm text-muted-foreground">
-          Already have an account?{" "}
-          <Link to="/login" className="text-primary hover:underline font-medium">
-            Log In
-          </Link>
-        </p>
-      </Card>
+          <p className="text-center mt-6 text-sm text-muted-foreground">
+            Already have an account?{" "}
+            <Link to="/login" className="text-primary hover:underline font-medium">
+              Log in
+            </Link>
+          </p>
+        </Card>
+      </div>
     </div>
   );
 };

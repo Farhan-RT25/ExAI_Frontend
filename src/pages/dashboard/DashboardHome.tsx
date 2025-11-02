@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Mail, Clock, TrendingUp, MessageSquare, ArrowUp, ArrowDown } from "lucide-react";
+import { Mail, Clock, TrendingUp, MessageSquare, ArrowUp, ArrowDown, ArrowRight, HelpCircle } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -44,34 +44,47 @@ const recentActivity = [
 const DashboardHome = () => {
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold mb-2">Hi, Kristin Watson 👋</h1>
-        <p className="text-muted-foreground">Here's what's happening with your emails today</p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-bold mb-1.5">Hi, Kristin Watson 👋</h1>
+          <p className="text-sm text-muted-foreground">Greetings on UPMAIL! Generate your Email Campaign effortlessly with just a single click.</p>
+        </div>
+        <Button className="bg-teal hover:bg-teal/90 text-teal-foreground">
+          Create New Campaign
+          <ArrowRight className="ml-2 h-4 w-4" />
+        </Button>
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
         {kpiData.map((kpi, index) => (
-          <Card key={index} className="shadow-card hover:shadow-card-hover transition-all">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
+          <Card key={index} className="shadow-card hover:shadow-card-hover transition-all border-border">
+            <CardHeader className="flex flex-row items-center justify-between pb-3 pt-5 px-5">
+              <CardTitle className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
                 {kpi.title}
+                <HelpCircle className="h-3.5 w-3.5" />
               </CardTitle>
-              <kpi.icon className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold">{kpi.value}</div>
-              {kpi.change && (
-                <div className="flex items-center gap-1 mt-1">
-                  {kpi.trend === "up" ? (
-                    <ArrowUp className="h-4 w-4 text-success" />
-                  ) : (
-                    <ArrowDown className="h-4 w-4 text-success" />
+            <CardContent className="px-5 pb-5">
+              <div className="flex items-end justify-between">
+                <div>
+                  <div className="text-2xl font-bold">{kpi.value}</div>
+                  {kpi.change && (
+                    <div className="flex items-center gap-1 mt-1">
+                      <span className={`text-xs font-medium ${kpi.trend === "up" ? "text-success" : "text-success"}`}>
+                        {kpi.change}
+                      </span>
+                      <span className="text-xs text-muted-foreground">From Last Month</span>
+                    </div>
                   )}
-                  <span className="text-sm text-success">{kpi.change}</span>
-                  <span className="text-sm text-muted-foreground">from last month</span>
                 </div>
-              )}
+                {/* Mini sparkline placeholder */}
+                <div className="h-12 w-24 flex items-end gap-0.5">
+                  {[40, 65, 45, 70, 55, 80, 60, 85, 75, 90].map((height, i) => (
+                    <div key={i} className="flex-1 bg-muted rounded-sm" style={{ height: `${height}%` }} />
+                  ))}
+                </div>
+              </div>
             </CardContent>
           </Card>
         ))}
