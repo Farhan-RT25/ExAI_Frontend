@@ -1,146 +1,312 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { Info } from "lucide-react";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ChevronDown } from "lucide-react";
-import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { HelpCircle, Bell, Settings } from "lucide-react";
+
+const emailAccounts = [
+  { 
+    id: "work", 
+    name: "Work", 
+    email: "kristin.watson@company.com", 
+    color: "bg-blue-500",
+    draftsEnabled: true,
+    customPrompt: ""
+  },
+  { 
+    id: "personal", 
+    name: "Personal", 
+    email: "kristin.w@gmail.com", 
+    color: "bg-purple-500",
+    draftsEnabled: true,
+    customPrompt: ""
+  },
+  { 
+    id: "business", 
+    name: "Business", 
+    email: "kw@mybusiness.com", 
+    color: "bg-green-500",
+    draftsEnabled: false,
+    customPrompt: ""
+  },
+];
+
+const categories = [
+  { id: "to-respond", name: "To Respond", enabled: true },
+  { id: "sales", name: "Sales", enabled: true },
+  { id: "admin", name: "Admin", enabled: false },
+  { id: "marketing", name: "Marketing", enabled: false },
+  { id: "hr", name: "HR", enabled: true },
+];
 
 const Drafts = () => {
-  const [gmailOpen, setGmailOpen] = useState(false);
-  const [outlookOpen, setOutlookOpen] = useState(false);
-  const [signaturesOpen, setSignaturesOpen] = useState(false);
+  const [globalEnabled, setGlobalEnabled] = useState(true);
+  const [notifyOnDrafts, setNotifyOnDrafts] = useState(true);
+  const [accounts, setAccounts] = useState(emailAccounts);
+  const [selectedCategories, setSelectedCategories] = useState(categories);
+  const [globalPrompt, setGlobalPrompt] = useState("");
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedAccount, setSelectedAccount] = useState(null);
+  const [accountPrompt, setAccountPrompt] = useState("");
+
+  const handleAccountToggle = (accountId, checked) => {
+    setAccounts(prev => prev.map(acc => 
+      acc.id === accountId ? { ...acc, draftsEnabled: checked } : acc
+    ));
+  };
+
+  const handleCategoryToggle = (categoryId, checked) => {
+    setSelectedCategories(prev => prev.map(cat =>
+      cat.id === categoryId ? { ...cat, enabled: checked } : cat
+    ));
+  };
+
+  const openAccountSettings = (account) => {
+    setSelectedAccount(account);
+    setAccountPrompt(account.customPrompt);
+    setDialogOpen(true);
+  };
+
+  const saveAccountSettings = () => {
+    setAccounts(prev => prev.map(acc =>
+      acc.id === selectedAccount.id ? { ...acc, customPrompt: accountPrompt } : acc
+    ));
+    setDialogOpen(false);
+    setSelectedAccount(null);
+    setAccountPrompt("");
+  };
+
+  const characterCount = globalPrompt.length;
 
   return (
-    <div className="max-w-4xl space-y-6">
+    <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold mb-2">Draft Replies</h1>
-        <p className="text-muted-foreground">
-          Configure AI-powered draft email responses
+        <h1 className="text-2xl font-bold mb-1.5">Draft Reply Settings</h1>
+        <p className="text-sm text-muted-foreground">
+          Configure how AI generates draft responses for your emails
         </p>
       </div>
 
-      {/* Enable Toggle */}
-      <Card className="shadow-card">
-        <CardHeader>
+      {/* Master Toggle */}
+      <Card className="shadow-card hover:shadow-card-hover transition-all border-border">
+        <CardHeader className="pb-3 pt-5 px-5">
           <div className="flex items-center justify-between">
-            <div className="space-y-1">
-              <CardTitle>Draft Replies</CardTitle>
-              <CardDescription>
-                When you get an email you need to reply to, we'll leave a draft response in your inbox for you to send or edit.
-              </CardDescription>
+            <div className="flex-1">
+              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1.5 mb-2">
+                Enable Draft Replies
+                <HelpCircle className="h-3.5 w-3.5" />
+              </CardTitle>
+              <p className="text-xs text-muted-foreground">
+                When enabled, AI will automatically generate draft responses for emails that require replies
+              </p>
             </div>
-            <Switch defaultChecked />
+            <Switch
+              checked={globalEnabled}
+              onCheckedChange={setGlobalEnabled}
+            />
           </div>
         </CardHeader>
       </Card>
 
-      {/* Info Box */}
-      <Card className="shadow-card bg-muted/30">
-        <CardContent className="pt-6">
-          <div className="flex gap-3">
-            <Info className="h-5 w-5 text-info flex-shrink-0 mt-0.5" />
-            <div className="space-y-4">
-              <p className="text-sm">
-                For draft replies to work smoothly, your Gmail or Outlook should group related emails into a single thread. We save drafts within the thread for easy access.
-              </p>
-              <p className="text-sm">
-                By default, both Gmail and Outlook do this automatically. If your emails aren't grouping, you can enable threading by following the steps below:
-              </p>
+      {/* Draft Review Settings */}
+      <Card className="shadow-card hover:shadow-card-hover transition-all border-border">
+        <CardHeader className="pb-3 pt-5 px-5">
+          <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
+            Draft Review Settings
+            <HelpCircle className="h-3.5 w-3.5" />
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="px-5 pb-5 space-y-4">
+          <div className="flex items-start justify-between py-3 border-b border-border">
+            <div className="flex items-start gap-3">
+              <Bell className="h-5 w-5 text-muted-foreground mt-0.5" />
+              <div>
+                <p className="text-sm font-medium mb-1">Notify when drafts are ready</p>
+                <p className="text-xs text-muted-foreground">
+                  Receive notifications when AI finishes generating draft responses
+                </p>
+              </div>
+            </div>
+            <Switch
+              checked={notifyOnDrafts}
+              onCheckedChange={setNotifyOnDrafts}
+            />
+          </div>
 
-              {/* Gmail Collapsible */}
-              <Collapsible open={gmailOpen} onOpenChange={setGmailOpen}>
-                <CollapsibleTrigger className="flex items-center justify-between w-full p-3 bg-card rounded-lg hover:bg-accent transition-colors">
-                  <span className="font-semibold text-sm">How to enable threading in Gmail</span>
-                  <ChevronDown
-                    className={`h-4 w-4 transition-transform ${gmailOpen ? "rotate-180" : ""}`}
+          <div className="pt-2">
+            <p className="text-sm font-medium mb-3">Auto-draft for these categories</p>
+            <div className="space-y-2">
+              {selectedCategories.map((category) => (
+                <div key={category.id} className="flex items-center space-x-3 py-2">
+                  <Checkbox
+                    id={category.id}
+                    checked={category.enabled}
+                    onCheckedChange={(checked) => handleCategoryToggle(category.id, checked)}
                   />
-                </CollapsibleTrigger>
-                <CollapsibleContent className="pt-3 px-3">
-                  <ol className="list-decimal list-inside space-y-2 text-sm text-muted-foreground">
-                    <li>Open Gmail settings (gear icon)</li>
-                    <li>Click "See all settings"</li>
-                    <li>Go to the "General" tab</li>
-                    <li>Find "Conversation View" and select "Conversation view on"</li>
-                    <li>Scroll down and click "Save Changes"</li>
-                  </ol>
-                </CollapsibleContent>
-              </Collapsible>
-
-              {/* Outlook Collapsible */}
-              <Collapsible open={outlookOpen} onOpenChange={setOutlookOpen}>
-                <CollapsibleTrigger className="flex items-center justify-between w-full p-3 bg-card rounded-lg hover:bg-accent transition-colors">
-                  <span className="font-semibold text-sm">How to enable threading in Outlook</span>
-                  <ChevronDown
-                    className={`h-4 w-4 transition-transform ${outlookOpen ? "rotate-180" : ""}`}
-                  />
-                </CollapsibleTrigger>
-                <CollapsibleContent className="pt-3 px-3">
-                  <ol className="list-decimal list-inside space-y-2 text-sm text-muted-foreground">
-                    <li>Open Outlook and go to View tab</li>
-                    <li>Click "Show as Conversations"</li>
-                    <li>Select "All mailboxes"</li>
-                    <li>Enable "Show messages from other folders"</li>
-                  </ol>
-                </CollapsibleContent>
-              </Collapsible>
+                  <label
+                    htmlFor={category.id}
+                    className="text-sm cursor-pointer flex-1"
+                  >
+                    {category.name}
+                  </label>
+                </div>
+              ))}
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Draft Prompt */}
-      <Card className="shadow-card">
-        <CardHeader>
-          <CardTitle>Draft Prompt</CardTitle>
-          <CardDescription>
-            Provide custom instructions to the AI that generates your draft email replies. For example, your priorities, how you make decisions, or information about your business. (max 1000 characters)
-          </CardDescription>
+      {/* Account-Specific Settings */}
+      <Card className="shadow-card hover:shadow-card-hover transition-all border-border">
+        <CardHeader className="pb-3 pt-5 px-5">
+          <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
+            Account-Specific Settings
+            <HelpCircle className="h-3.5 w-3.5" />
+          </CardTitle>
         </CardHeader>
-        <CardContent>
-          <Textarea
-            placeholder="I am concise in my communication, polite but direct.
-
-I am in <role> for <company name>.
-
-I prefer shorter emails.
-
-If asked for help or guidance, I prefer to respond with bullet points for ease of reading.
-
-I don't want to be too compliant in my responses. I can acknowledge but not necessarily agree."
-            className="min-h-[200px] font-mono text-sm"
-            maxLength={1000}
-          />
-          <p className="text-xs text-muted-foreground mt-2">
-            Character count: 0 / 1000
+        <CardContent className="px-5 pb-5">
+          <p className="text-xs text-muted-foreground mb-4">
+            Customize draft behavior for each email account. Account-specific prompts override the global prompt.
           </p>
+          <div className="space-y-3">
+            {accounts.map((account) => (
+              <div
+                key={account.id}
+                className="flex items-center justify-between p-4 rounded-lg hover:bg-muted/50 transition-colors border border-border"
+              >
+                <div className="flex items-center gap-3 flex-1">
+                  <div className={`w-2 h-2 rounded-full ${account.color}`} />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium">{account.name}</p>
+                    <p className="text-xs text-muted-foreground truncate">{account.email}</p>
+                  </div>
+                  {account.customPrompt && (
+                    <Badge variant="secondary" className="text-xs">
+                      Custom
+                    </Badge>
+                  )}
+                </div>
+                <div className="flex items-center gap-3">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => openAccountSettings(account)}
+                    className="text-xs h-8"
+                  >
+                    <Settings className="h-3.5 w-3.5 mr-1.5" />
+                    Configure
+                  </Button>
+                  <Switch
+                    checked={account.draftsEnabled}
+                    onCheckedChange={(checked) => handleAccountToggle(account.id, checked)}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
         </CardContent>
       </Card>
 
-      {/* Email Signatures */}
-      <Card className="shadow-card">
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <CardTitle>Email Signatures</CardTitle>
-            <Info className="h-4 w-4 text-muted-foreground" />
-          </div>
+      {/* Global Draft Prompt */}
+      <Card className="shadow-card hover:shadow-card-hover transition-all border-border">
+        <CardHeader className="pb-3 pt-5 px-5">
+          <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
+            Global Draft Prompt
+            <HelpCircle className="h-3.5 w-3.5" />
+          </CardTitle>
         </CardHeader>
-        <CardContent>
-          <Collapsible open={signaturesOpen} onOpenChange={setSignaturesOpen}>
-            <CollapsibleTrigger className="flex items-center justify-between w-full p-4 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors">
-              <span className="font-semibold">How signatures work</span>
-              <ChevronDown
-                className={`h-4 w-4 transition-transform ${signaturesOpen ? "rotate-180" : ""}`}
-              />
-            </CollapsibleTrigger>
-            <CollapsibleContent className="pt-4">
-              <p className="text-sm text-muted-foreground">
-                We'll use your account-specific signature first. If you haven't set one up, we'll use your default signature instead.
-              </p>
-            </CollapsibleContent>
-          </Collapsible>
+        <CardContent className="px-5 pb-5">
+          <p className="text-xs text-muted-foreground mb-3">
+            Provide instructions to guide AI in generating draft replies. Include your communication style, priorities, or business context. (max 1000 characters)
+          </p>
+          <Textarea
+            placeholder="Example instructions:
+
+• Keep responses concise and professional
+• Use bullet points for clarity when listing items
+• Always acknowledge requests before providing solutions
+• Maintain a friendly but direct tone
+• Include relevant context from previous conversations"
+            className="min-h-[180px] text-sm resize-none"
+            maxLength={1000}
+            value={globalPrompt}
+            onChange={(e) => setGlobalPrompt(e.target.value)}
+          />
+          <div className="flex items-center justify-between mt-2">
+            <p className="text-xs text-muted-foreground">
+              Character count: {characterCount} / 1000
+            </p>
+            <Button size="sm" variant="outline" className="text-xs">
+              Save Prompt
+            </Button>
+          </div>
         </CardContent>
       </Card>
+
+      {/* Account-Specific Prompt Dialog */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="sm:max-w-[550px]">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-semibold">
+              Configure {selectedAccount?.name}
+            </DialogTitle>
+            <DialogDescription className="text-sm">
+              {selectedAccount?.email}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Account-Specific Prompt</p>
+              <p className="text-xs text-muted-foreground mb-3">
+                These instructions will override the global prompt for this account only. Leave empty to use the global prompt.
+              </p>
+              <Textarea
+                placeholder="Example for work account:
+
+• Always include project references
+• CC relevant team members when appropriate
+• Use formal language and company terminology
+• Include action items at the end of emails"
+                className="min-h-[200px] text-sm resize-none"
+                maxLength={1000}
+                value={accountPrompt}
+                onChange={(e) => setAccountPrompt(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Character count: {accountPrompt.length} / 1000
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setDialogOpen(false);
+                setSelectedAccount(null);
+                setAccountPrompt("");
+              }}
+            >
+              Cancel
+            </Button>
+            <Button onClick={saveAccountSettings}>
+              Save Settings
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
