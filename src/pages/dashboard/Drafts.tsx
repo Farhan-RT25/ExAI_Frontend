@@ -90,9 +90,9 @@ const Drafts = () => {
   const characterCount = globalPrompt.length;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6">
       <div>
-        <h1 className="text-2xl font-bold mb-1.5">Draft Reply Settings</h1>
+        <h1 className="text-xl md:text-2xl font-bold mb-1.5">Draft Reply Settings</h1>
         <p className="text-sm text-muted-foreground">
           Configure how AI generates draft responses for your emails
         </p>

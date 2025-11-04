@@ -13,7 +13,7 @@ const Settings = () => {
   const [activeTab, setActiveTab] = useState("profile");
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6">
       {/* Header Card with User Info */}
       <Card className="shadow-card border-border overflow-hidden">
         <div className="bg-gradient-to-r from-cyan-500 to-blue-500 h-32 relative">
@@ -33,7 +33,7 @@ const Settings = () => {
       </Card>
 
       {/* Tabs */}
-      <div className="flex gap-6 border-b border-border">
+      <div className="flex gap-4 md:gap-6 border-b border-border overflow-x-auto">
         <button
           onClick={() => setActiveTab("profile")}
           className={`pb-3 text-sm font-medium transition-colors relative ${
@@ -77,7 +77,7 @@ const Settings = () => {
 
       {/* Profile Tab */}
       {activeTab === "profile" && (
-        <div className="space-y-6">
+        <div className="space-y-4 md:space-y-6">
           <Card className="shadow-card hover:shadow-card-hover transition-all border-border">
             <CardHeader className="pb-3 pt-5 px-5">
               <CardTitle className="text-sm font-medium">User Information</CardTitle>
@@ -175,7 +175,7 @@ const Settings = () => {
 
       {/* Preferences Tab */}
       {activeTab === "preferences" && (
-        <div className="space-y-6">
+        <div className="space-y-4 md:space-y-6">
           <Card className="shadow-card hover:shadow-card-hover transition-all border-border">
             <CardHeader className="pb-3 pt-5 px-5">
               <CardTitle className="text-sm font-medium">General Settings</CardTitle>
@@ -317,7 +317,7 @@ const Settings = () => {
 
       {/* Billing Tab */}
       {activeTab === "billing" && (
-        <div className="space-y-6">
+        <div className="space-y-4 md:space-y-6">
           <Card className="shadow-card hover:shadow-card-hover transition-all border-border">
             <CardHeader className="pb-3 pt-5 px-5">
               <CardTitle className="text-sm font-medium">Current Plan</CardTitle>

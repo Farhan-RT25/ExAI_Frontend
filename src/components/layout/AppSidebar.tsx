@@ -13,6 +13,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { Mail } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const menuItems = [
   { title: "Dashboard", url: "/dashboard", icon: Home },
@@ -23,8 +24,15 @@ const menuItems = [
 ];
 
 export function AppSidebar() {
-  const { state } = useSidebar();
+  const { state, setOpenMobile } = useSidebar();
   const isCollapsed = state === "collapsed";
+  const isMobile = useIsMobile();
+
+  const handleNavClick = () => {
+    if (isMobile) {
+      setOpenMobile(false);
+    }
+  };
 
   return (
     <Sidebar collapsible="icon">
@@ -48,10 +56,11 @@ export function AppSidebar() {
                     <NavLink
                       to={item.url}
                       end={item.url === "/dashboard"}
+                      onClick={handleNavClick}
                       className={({ isActive }) =>
                         isActive
-                          ? "text-primary font-semibold"
-                          : "text-muted-foreground hover:text-foreground"
+                          ? "bg-primary/10 text-primary font-semibold hover:bg-primary/15 hover:text-primary"
+                          : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
                       }
                     >
                       <item.icon className="h-4 w-4" />
@@ -81,10 +90,11 @@ export function AppSidebar() {
                 <SidebarMenuButton asChild>
                   <NavLink
                     to="/dashboard/settings"
+                    onClick={handleNavClick}
                     className={({ isActive }) =>
                       isActive
-                        ? "text-primary font-semibold"
-                        : "text-muted-foreground hover:text-foreground"
+                        ? "bg-primary/10 text-primary font-semibold hover:bg-primary/15 hover:text-primary"
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
                     }
                   >
                     <Settings className="h-4 w-4" />

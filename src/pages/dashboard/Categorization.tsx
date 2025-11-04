@@ -81,16 +81,16 @@ const Categorization = () => {
   const filteredCategories = getFilteredCategories();
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-start justify-between">
+    <div className="space-y-4 md:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold mb-1.5">Manage Categories</h1>
+          <h1 className="text-xl md:text-2xl font-bold mb-1.5">Manage Categories</h1>
           <p className="text-sm text-muted-foreground">
             Select which categories to use for organizing your emails
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
           {/* Filter Tabs */}
           <div className="flex gap-1 bg-muted/50 rounded-lg p-1">
             <button
@@ -128,7 +128,7 @@ const Categorization = () => {
           {/* Add Category Button */}
           <Button
             onClick={() => setDialogOpen(true)}
-            className="group"
+            className="group w-full sm:w-auto"
             size="sm"
           >
             <Plus className="mr-2 h-4 w-4 transition-transform duration-300 group-hover:rotate-90" />

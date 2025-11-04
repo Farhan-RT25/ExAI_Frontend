@@ -127,14 +127,14 @@ const Connections = () => {
   const pendingAccounts = pendingProvider ? pendingProvider.accounts.filter(acc => acc.connected) : [];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6">
       <div>
-        <h1 className="text-2xl font-bold mb-1.5">Connections</h1>
+        <h1 className="text-xl md:text-2xl font-bold mb-1.5">Connections</h1>
         <p className="text-sm text-muted-foreground">Manage your connected email accounts</p>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-6 border-b border-border">
+      <div className="flex gap-4 md:gap-6 border-b border-border overflow-x-auto">
         <button
           onClick={() => setActiveTab("all")}
           className={`pb-3 text-sm font-medium transition-colors relative ${
@@ -185,7 +185,7 @@ const Connections = () => {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-5">
           {filteredConnections.map((connection) => {
             const connectedCount = connection.accounts.filter(acc => acc.connected).length;
             const isConnected = connectedCount > 0;

@@ -84,17 +84,17 @@ const DashboardHome = () => {
   const currentData = accountData[selectedAccount];
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-start justify-between">
+    <div className="space-y-4 md:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold mb-1.5">Hi, Kristin Watson 👋</h1>
+          <h1 className="text-xl md:text-2xl font-bold mb-1.5">Hi, Kristin Watson 👋</h1>
           <p className="text-sm text-muted-foreground">Manage your email workflow efficiently.</p>
         </div>
         
         {/* Email Account Selector */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="min-w-[240px] justify-between">
+            <Button variant="outline" className="w-full sm:w-auto sm:min-w-[240px] justify-between">
               <div className="flex items-center gap-2">
                 <div className={`w-2 h-2 rounded-full ${currentAccount.color}`} />
                 <div className="flex flex-col items-start">
@@ -131,7 +131,7 @@ const DashboardHome = () => {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5">
         {currentData.kpi.map((kpi, index) => (
           <Card key={index} className="shadow-card hover:shadow-card-hover transition-all border-border">
             <CardHeader className="flex flex-row items-center justify-between pb-3 pt-5 px-5">
@@ -217,7 +217,7 @@ const DashboardHome = () => {
       </Card>
 
       {/* Category Breakdown & Quick Actions */}
-      <div className="grid md:grid-cols-2 gap-5">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5">
         <Card className="shadow-card hover:shadow-card-hover transition-all border-border">
           <CardHeader className="pb-3 pt-5 px-5">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
