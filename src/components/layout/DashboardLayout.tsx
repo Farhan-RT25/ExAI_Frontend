@@ -42,15 +42,15 @@ export const DashboardLayout = () => {
 
   return (
     <SidebarProvider>
-      <div className="min-h-screen flex w-full">
+      <div className="min-h-screen flex w-full bg-muted">
         <AppSidebar />
-        <div className="flex-1 flex flex-col">
-          <header className="h-16 border-b border-border bg-card px-4 md:px-6 flex items-center justify-between">
+        <div className="flex-1 flex flex-col p-4 md:p-2 gap-4 md:gap-2">
+          <header className="bg-card rounded-sm border border-border shadow-sm px-4 md:px-6 py-4 flex items-center justify-between">
             <div className="flex items-center gap-3 md:gap-6 flex-1 min-w-0">
               <SidebarTrigger />
               <div className="min-w-0 flex-1">
-                <h2 className="text-sm md:text-lg font-semibold text-foreground truncate">{pageInfo.title}</h2>
-                <p className="text-xs text-muted-foreground hidden sm:block truncate">{pageInfo.subtitle}</p>
+                <h2 className="text-base md:text-lg font-semibold text-foreground truncate">{pageInfo.title}</h2>
+                <p className="text-xs text-muted-foreground hidden sm:block truncate mt-0.5">{pageInfo.subtitle}</p>
               </div>
             </div>
             <div className="flex items-center gap-2 md:gap-3">
@@ -64,7 +64,7 @@ export const DashboardLayout = () => {
               </div>
               <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full relative">
                 <Bell className="h-4 w-4" />
-                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-destructive rounded-full border border-card"></span>
+                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-destructive rounded-full border-2 border-card"></span>
               </Button>
               <Avatar className="h-9 w-9">
                 <AvatarFallback className="bg-gradient-primary text-primary-foreground text-xs md:text-sm">
@@ -73,7 +73,7 @@ export const DashboardLayout = () => {
               </Avatar>
             </div>
           </header>
-          <main className="flex-1 p-4 md:p-6 bg-background overflow-auto">
+          <main className="flex-1 bg-card rounded-sm border border-border shadow-sm p-4 md:p-6 overflow-auto">
             <Outlet />
           </main>
         </div>

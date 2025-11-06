@@ -1,5 +1,5 @@
 import { Home, Tag, FileEdit, Video, Link2, Settings, LogOut } from "lucide-react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import {
   Sidebar,
@@ -14,6 +14,8 @@ import {
 } from "@/components/ui/sidebar";
 import { Mail } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { logout } from "@/lib/api/auth";
+import { useToast } from "@/hooks/use-toast";
 
 const menuItems = [
   { title: "Dashboard", url: "/dashboard", icon: Home },
@@ -27,6 +29,8 @@ export function AppSidebar() {
   const { state, setOpenMobile } = useSidebar();
   const isCollapsed = state === "collapsed";
   const isMobile = useIsMobile();
+  const navigate = useNavigate();
+  const { toast } = useToast();
 
   const handleNavClick = () => {
     if (isMobile) {
@@ -34,15 +38,32 @@ export function AppSidebar() {
     }
   };
 
+  const handleLogout = async () => {
+    try {
+      await logout();
+      toast({
+        title: "Logged out",
+        description: "You have been successfully logged out",
+      });
+      navigate('/login');
+    } catch (error) {
+      toast({
+        title: "Logout failed",
+        description: "Could not log out. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
-    <Sidebar collapsible="icon">
-      <SidebarContent>
-        <div className="p-4 border-b border-sidebar-border">
+    <Sidebar collapsible="icon" variant="floating">
+      <SidebarContent className="bg-card rounded-sm border border-border shadow-sm" >
+        <div className="p-2 border-b border-sidebar-border">
           <div className="flex items-center gap-2">
-            <div className="p-2 bg-gradient-primary rounded-lg">
+            <div className="p-2 mb-5 mt-2 bg-gradient-primary rounded-lg">
               <Mail className="h-4 w-4 text-primary-foreground" />
             </div>
-            {!isCollapsed && <span className="font-semibold">Ex AI</span>}
+            {!isCollapsed && <span className="font-semibold mb-3">Ex AI</span>}
           </div>
         </div>
 
@@ -103,7 +124,7 @@ export function AppSidebar() {
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton onClick={() => console.log("Logout")}>
+                <SidebarMenuButton onClick={handleLogout}>
                   <LogOut className="h-4 w-4" />
                   {!isCollapsed && <span>Logout</span>}
                 </SidebarMenuButton>

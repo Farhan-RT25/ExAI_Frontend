@@ -9,6 +9,7 @@ import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import EmailConnection from "./pages/onboarding/EmailConnection";
 import OAuthAuthorization from "./pages/onboarding/OAuthAuthorization";
+import OAuthCallback from "./pages/onboarding/OAuthCallback";
 import UserQuestions from "./pages/onboarding/UserQuestions";
 import CategorySelection from "./pages/onboarding/CategorySelection";
 import Processing from "./pages/onboarding/Processing";
@@ -34,6 +35,12 @@ const App = () => (
             <Route path="/" element={<Landing />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
+            {/* Backend redirects to these paths */}
+            <Route path="/auth/google/callback" element={<OAuthCallback />} />
+            <Route path="/auth/microsoft/callback" element={<OAuthCallback />} />
+            <Route path="/auth/zoho/callback" element={<OAuthCallback />} />
+            {/* Fallback route for /oauth/callback */}
+            <Route path="/oauth/callback" element={<OAuthCallback />} />
             <Route path="/onboarding/email-connection" element={<EmailConnection />} />
             <Route path="/onboarding/oauth-auth" element={<OAuthAuthorization />} />
             <Route path="/onboarding/questions" element={<UserQuestions />} />

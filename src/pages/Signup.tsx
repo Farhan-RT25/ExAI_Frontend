@@ -8,6 +8,10 @@ import { Mail, Eye, EyeOff, Sparkles, Star } from "lucide-react";
 import { useOnboarding } from "@/contexts/OnboardingContext";
 import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { signup, saveAuthData } from "@/lib/api/auth";
+import { initiateGoogleSignup } from "@/lib/api/google";
+import { initiateMicrosoftSignup } from "@/lib/api/microsoft";
+import { initiateZohoSignup } from "@/lib/api/zoho";
 
 const Signup = () => {
   const navigate = useNavigate();
@@ -19,6 +23,7 @@ const Signup = () => {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isLoading, setIsLoading] = useState(false);
 
   const getPasswordStrength = (pwd: string) => {
     if (pwd.length < 8) return { strength: 'weak', color: 'text-danger' };
@@ -46,30 +51,64 @@ const Signup = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!validateForm()) {
       return;
     }
 
-    // Store in context
-    setFullName(fullName);
-    setOnboardingEmail(email);
-    
-    toast({
-      title: "Account created!",
-      description: "Let's connect your email accounts",
-    });
-    
-    navigate('/onboarding/email-connection');
+    setIsLoading(true);
+
+    try {
+      const authResponse = await signup({
+        email,
+        full_name: fullName,
+        password,
+      });
+      
+      // Save auth data to localStorage
+      saveAuthData(authResponse);
+      
+      // Store in onboarding context
+      setFullName(fullName);
+      setOnboardingEmail(email);
+      
+      toast({
+        title: "Account created!",
+        description: "Let's connect your email accounts",
+      });
+      
+      // Navigate to onboarding
+      navigate('/onboarding/email-connection');
+    } catch (error) {
+      toast({
+        title: "Signup failed",
+        description: error instanceof Error ? error.message : "Could not create account",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleOAuthSignup = (provider: string) => {
-    toast({
-      title: `${provider} sign up`,
-      description: "OAuth integration coming soon",
-    });
+    switch (provider) {
+      case "Google":
+        initiateGoogleSignup();
+        break;
+      case "Microsoft":
+        initiateMicrosoftSignup();
+        break;
+      case "Zoho":
+        initiateZohoSignup();
+        break;
+      default:
+        toast({
+          title: `${provider} sign up`,
+          description: "Provider not configured",
+        });
+    }
   };
 
   const passwordStrength = password ? getPasswordStrength(password) : null;
@@ -150,6 +189,7 @@ const Signup = () => {
                 value={fullName}
                 onChange={(e) => setFullNameLocal(e.target.value)}
                 className={`mt-1.5 ${errors.fullName ? "border-danger" : ""}`}
+                disabled={isLoading}
               />
               {errors.fullName && (
                 <p className="text-xs text-danger mt-1">{errors.fullName}</p>
@@ -165,6 +205,7 @@ const Signup = () => {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className={`mt-1.5 ${errors.email ? "border-danger" : ""}`}
+                disabled={isLoading}
               />
               {errors.email && (
                 <p className="text-xs text-danger mt-1">{errors.email}</p>
@@ -181,11 +222,13 @@ const Signup = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className={`${errors.password ? "border-danger pr-10" : "pr-10"}`}
+                  disabled={isLoading}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  disabled={isLoading}
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
@@ -198,8 +241,12 @@ const Signup = () => {
               )}
             </div>
 
-            <Button type="submit" className="w-full h-11 text-base bg-primary hover:bg-primary-dark">
-              Create account
+            <Button 
+              type="submit" 
+              className="w-full h-11 text-base bg-primary hover:bg-primary-dark"
+              disabled={isLoading}
+            >
+              {isLoading ? "Creating account..." : "Create account"}
             </Button>
           </form>
 
@@ -208,6 +255,7 @@ const Signup = () => {
             className="w-full h-11 text-base"
             onClick={() => handleOAuthSignup("Google")}
             type="button"
+            disabled={isLoading}
           >
             <svg className="mr-2 h-5 w-5" viewBox="0 0 24 24">
               <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -224,6 +272,7 @@ const Signup = () => {
               className="w-full h-11 text-base"
               onClick={() => handleOAuthSignup("Microsoft")}
               type="button"
+              disabled={isLoading}
             >
               <svg className="mr-2 h-5 w-5" viewBox="0 0 24 24">
                 <path fill="#F25022" d="M1 1h10v10H1z"/>
@@ -239,6 +288,7 @@ const Signup = () => {
               className="w-full h-11 text-base"
               onClick={() => handleOAuthSignup("Zoho")}
               type="button"
+              disabled={isLoading}
             >
               <Mail className="mr-2 h-5 w-5" />
               Continue with Zoho

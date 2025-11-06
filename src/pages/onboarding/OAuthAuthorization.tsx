@@ -3,19 +3,61 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
 import { useOnboarding } from "@/contexts/OnboardingContext";
-import { Mail, Loader2, Check } from "lucide-react";
+import { Mail, Loader2, Check, AlertCircle } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { getAuthorizationUrl } from "@/lib/api/oauth";
 
 interface ProviderStatus {
   provider: 'google' | 'microsoft' | 'zoho';
   emails: string[];
-  status: 'waiting' | 'authorizing' | 'done';
+  status: 'waiting' | 'authorizing' | 'done' | 'error';
 }
 
 const OAuthAuthorization = () => {
   const navigate = useNavigate();
   const { emailAccounts } = useOnboarding();
+  const { toast } = useToast();
   const [providers, setProviders] = useState<ProviderStatus[]>([]);
   const [allDone, setAllDone] = useState(false);
+
+  useEffect(() => {
+    // Check if we're returning from OAuth callback
+    const urlParams = new URLSearchParams(window.location.search);
+    const authSuccess = urlParams.get('auth_success');
+    const provider = urlParams.get('provider');
+    
+    if (authSuccess === 'true' && provider) {
+      // Mark this provider as done
+      setProviders(prev => prev.map(p => 
+        p.provider === provider ? { ...p, status: 'done' } : p
+      ));
+      
+      toast({
+        title: "Authorization successful!",
+        description: `${provider} accounts connected successfully.`,
+      });
+      
+      // Clean up URL
+      window.history.replaceState({}, '', '/onboarding/oauth-auth');
+      
+      // Continue with next provider if any
+      continueAuthorization();
+    } else if (authSuccess === 'false') {
+      const error = urlParams.get('error');
+      toast({
+        title: "Authorization failed",
+        description: error || "Could not connect accounts. Please try again.",
+        variant: "destructive",
+      });
+      
+      // Mark current authorizing provider as error
+      setProviders(prev => prev.map(p => 
+        p.status === 'authorizing' ? { ...p, status: 'error' } : p
+      ));
+      
+      window.history.replaceState({}, '', '/onboarding/oauth-auth');
+    }
+  }, []);
 
   useEffect(() => {
     // Group emails by provider
@@ -35,27 +77,63 @@ const OAuthAuthorization = () => {
 
     setProviders(providerList);
 
-    // Start authorization process
-    authorizeProviders(providerList);
+    // Start authorization process automatically
+    if (providerList.length > 0) {
+      startAuthorization(providerList);
+    }
   }, [emailAccounts]);
 
-  const authorizeProviders = async (providerList: ProviderStatus[]) => {
-    for (let i = 0; i < providerList.length; i++) {
+  const startAuthorization = async (providerList: ProviderStatus[]) => {
+    // Find first provider that needs authorization
+    const firstProvider = providerList[0];
+    if (firstProvider) {
+      await authorizeProvider(firstProvider.provider);
+    }
+  };
+
+  const continueAuthorization = async () => {
+    // Find next provider that needs authorization
+    const nextProvider = providers.find(p => p.status === 'waiting');
+    if (nextProvider) {
+      await authorizeProvider(nextProvider.provider);
+    } else {
+      // All done
+      const allSuccessful = providers.every(p => p.status === 'done');
+      if (allSuccessful) {
+        setAllDone(true);
+      }
+    }
+  };
+
+  const authorizeProvider = async (provider: 'google' | 'microsoft' | 'zoho') => {
+    try {
       // Set to authorizing
-      setProviders(prev => prev.map((p, idx) => 
-        idx === i ? { ...p, status: 'authorizing' } : p
+      setProviders(prev => prev.map(p => 
+        p.provider === provider ? { ...p, status: 'authorizing' } : p
       ));
 
-      // Simulate 2.5 second delay
-      await new Promise(resolve => setTimeout(resolve, 2500));
-
-      // Set to done
-      setProviders(prev => prev.map((p, idx) => 
-        idx === i ? { ...p, status: 'done' } : p
+      // Get authorization URL from API
+      const data = await getAuthorizationUrl(provider);
+      
+      // Redirect to OAuth provider (they will redirect back to /oauth/callback)
+      window.location.href = data.authorization_url;
+      
+    } catch (error) {
+      console.error('Error initiating authorization:', error);
+      toast({
+        title: "Authorization failed",
+        description: error instanceof Error ? error.message : "Could not start authorization process",
+        variant: "destructive",
+      });
+      
+      setProviders(prev => prev.map(p => 
+        p.provider === provider ? { ...p, status: 'error' } : p
       ));
     }
+  };
 
-    setAllDone(true);
+  const retryProvider = async (provider: 'google' | 'microsoft' | 'zoho') => {
+    await authorizeProvider(provider);
   };
 
   const getProviderLogo = (provider: string) => {
@@ -100,9 +178,14 @@ const OAuthAuthorization = () => {
       </div>
 
       <Card className="w-full max-w-2xl p-8 shadow-card-hover">
-        <h1 className="text-3xl font-bold text-center mb-2">Authorizing Email Accounts</h1>
+        <h1 className="text-3xl font-bold text-center mb-2">
+          {allDone ? "Authorization Complete!" : "Authorizing Email Accounts"}
+        </h1>
         <p className="text-muted-foreground text-center mb-8">
-          Please wait while we connect to your email providers
+          {allDone 
+            ? "All your email accounts are connected and ready"
+            : "Connecting to your email providers securely"
+          }
         </p>
 
         <div className="space-y-4">
@@ -120,21 +203,33 @@ const OAuthAuthorization = () => {
                     ))}
                   </div>
                 </div>
-                <div className="flex-shrink-0">
+                <div className="flex-shrink-0 flex items-center gap-2">
                   {provider.status === 'waiting' && (
                     <span className="text-sm text-muted-foreground">Waiting...</span>
                   )}
                   {provider.status === 'authorizing' && (
-                    <div className="flex items-center gap-2">
+                    <>
                       <Loader2 className="h-5 w-5 animate-spin text-primary" />
                       <span className="text-sm text-primary">Authorizing...</span>
-                    </div>
+                    </>
                   )}
                   {provider.status === 'done' && (
-                    <div className="flex items-center gap-2">
+                    <>
                       <Check className="h-5 w-5 text-success" />
-                      <span className="text-sm text-success font-semibold">Done</span>
-                    </div>
+                      <span className="text-sm text-success font-semibold">Connected</span>
+                    </>
+                  )}
+                  {provider.status === 'error' && (
+                    <>
+                      <AlertCircle className="h-5 w-5 text-destructive" />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => retryProvider(provider.provider)}
+                      >
+                        Retry
+                      </Button>
+                    </>
                   )}
                 </div>
               </div>
@@ -142,16 +237,35 @@ const OAuthAuthorization = () => {
           ))}
         </div>
 
-        {allDone && (
-          <div className="flex justify-center mt-8">
+        {!allDone && (
+          <div className="bg-muted/50 p-4 rounded-lg flex items-start gap-3 mt-6">
+            <AlertCircle className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
+            <div className="text-sm">
+              <p className="font-medium mb-1">Secure Authorization</p>
+              <p className="text-muted-foreground">
+                You'll be redirected to each provider's login page. Ex AI never sees your passwords.
+              </p>
+            </div>
+          </div>
+        )}
+
+        <div className="flex items-center justify-between mt-8">
+          <Button
+            variant="ghost"
+            onClick={() => navigate('/onboarding/email-connection')}
+            disabled={providers.some(p => p.status === 'authorizing')}
+          >
+            Back
+          </Button>
+          {allDone && (
             <Button
               onClick={() => navigate('/onboarding/questions')}
               className="min-w-32"
             >
               Continue
             </Button>
-          </div>
-        )}
+          )}
+        </div>
       </Card>
     </div>
   );

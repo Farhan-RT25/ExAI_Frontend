@@ -34,6 +34,8 @@ const Processing = () => {
         if (newProgress >= 100) {
           clearInterval(interval);
           setComplete(true);
+          // Set onboarding completion flag
+          localStorage.setItem('onboarding_completed', 'true');
           setTimeout(() => {
             navigate('/dashboard');
           }, 2000);

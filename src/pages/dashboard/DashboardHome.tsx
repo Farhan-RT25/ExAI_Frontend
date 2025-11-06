@@ -131,9 +131,9 @@ const DashboardHome = () => {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 md:gap-6">
         {currentData.kpi.map((kpi, index) => (
-          <Card key={index} className="shadow-card hover:shadow-card-hover transition-all border-border">
+          <Card key={index} className="shadow-md hover:shadow-lg transition-all border-border bg-card">
             <CardHeader className="flex flex-row items-center justify-between pb-3 pt-5 px-5">
               <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
                 {kpi.title}
@@ -217,7 +217,7 @@ const DashboardHome = () => {
       </Card>
 
       {/* Category Breakdown & Quick Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6">
         <Card className="shadow-card hover:shadow-card-hover transition-all border-border">
           <CardHeader className="pb-3 pt-5 px-5">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">

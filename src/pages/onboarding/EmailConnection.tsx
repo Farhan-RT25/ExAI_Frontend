@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -6,8 +6,9 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { useNavigate } from "react-router-dom";
 import { useOnboarding } from "@/contexts/OnboardingContext";
-import { Check, X, Mail, Trash2 } from "lucide-react";
+import { Check, X, Mail, Trash2, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { addEmails, EmailAccountRequest } from "@/lib/api/emails";
 
 interface EmailEntry {
   address: string;
@@ -18,12 +19,37 @@ interface EmailEntry {
 
 const EmailConnection = () => {
   const navigate = useNavigate();
-  const { setEmailAccounts } = useOnboarding();
+  const { emailAccounts, setEmailAccounts } = useOnboarding();
   const { toast } = useToast();
+  const initializedFromContext = useRef(false);
   
-  const [emails, setEmails] = useState<EmailEntry[]>([
-    { address: '', provider: '', type: '', validated: false }
-  ]);
+  // Initialize emails from context if available (from OAuth signup)
+  const [emails, setEmails] = useState<EmailEntry[]>(() => {
+    if (emailAccounts && emailAccounts.length > 0) {
+      return emailAccounts.map(acc => ({
+        address: acc.address,
+        provider: acc.provider,
+        type: acc.type,
+        validated: acc.validated
+      }));
+    }
+    return [{ address: '', provider: '', type: '', validated: false }];
+  });
+  
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Update emails when context changes (e.g., when navigating from OAuth)
+  useEffect(() => {
+    if (emailAccounts && emailAccounts.length > 0 && !initializedFromContext.current) {
+      setEmails(emailAccounts.map(acc => ({
+        address: acc.address,
+        provider: acc.provider,
+        type: acc.type,
+        validated: acc.validated
+      })));
+      initializedFromContext.current = true;
+    }
+  }, [emailAccounts]);
 
   const validateEmail = (email: string) => {
     const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -65,7 +91,13 @@ const EmailConnection = () => {
     (email) => email.validated && email.provider && email.type
   );
 
-  const handleContinue = () => {
+  // Helper function to map frontend provider to API service_provider
+  const mapProviderToServiceProvider = (provider: 'google' | 'microsoft' | 'zoho'): 'gmail' | 'microsoft' | 'zoho' => {
+    if (provider === 'google') return 'gmail';
+    return provider;
+  };
+
+  const handleContinue = async () => {
     const validEmails = emails.filter(
       (email) => email.validated && email.provider && email.type
     );
@@ -79,14 +111,44 @@ const EmailConnection = () => {
       return;
     }
 
-    setEmailAccounts(validEmails.map(e => ({
-      address: e.address,
-      provider: e.provider as 'google' | 'microsoft' | 'zoho',
-      type: e.type as 'work' | 'personal',
-      validated: true
-    })));
-    
-    navigate('/onboarding/oauth-auth');
+    setIsLoading(true);
+
+    try {
+      // Map to API format
+      const emailRequests: EmailAccountRequest[] = validEmails.map(e => ({
+        email: e.address,
+        service_provider: mapProviderToServiceProvider(e.provider as 'google' | 'microsoft' | 'zoho'),
+        type: e.type as 'personal' | 'work'
+      }));
+
+      // Save emails to database
+      await addEmails(emailRequests);
+
+      // Update context with the emails
+      setEmailAccounts(validEmails.map(e => ({
+        address: e.address,
+        provider: e.provider as 'google' | 'microsoft' | 'zoho',
+        type: e.type as 'work' | 'personal',
+        validated: true
+      })));
+      
+      toast({
+        title: "Emails saved!",
+        description: `Successfully added ${validEmails.length} email account(s)`,
+      });
+
+      // Navigate to OAuth authorization
+      navigate('/onboarding/oauth-auth');
+    } catch (error) {
+      console.error('Failed to save emails:', error);
+      toast({
+        title: "Failed to save emails",
+        description: error instanceof Error ? error.message : "Could not save email accounts. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -215,10 +277,17 @@ const EmailConnection = () => {
           </Button>
           <Button
             onClick={handleContinue}
-            disabled={!canContinue}
+            disabled={!canContinue || isLoading}
             className="min-w-32"
           >
-            Continue
+            {isLoading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              'Continue'
+            )}
           </Button>
         </div>
       </Card>

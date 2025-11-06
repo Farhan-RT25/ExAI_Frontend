@@ -10,109 +10,119 @@ import { Mail } from "lucide-react";
 
 const questions = [
   {
-    id: 'role',
+    id: "role",
     question: "What's your role?",
     options: [
-      'CEO / Executive',
-      'Manager / Team Lead',
-      'Sales / Business Development',
-      'Marketing',
-      'HR / Operations',
-      'Engineer / Developer',
-      'Other'
-    ]
+      "CEO / Executive",
+      "Manager / Team Lead",
+      "Sales / Business Development",
+      "Marketing",
+      "HR / Operations",
+      "Engineer / Developer",
+      "Other",
+    ],
   },
   {
-    id: 'industry',
+    id: "industry",
     question: "What industry are you in?",
     options: [
-      'Technology',
-      'Finance',
-      'Healthcare',
-      'Retail / E-commerce',
-      'Consulting',
-      'Manufacturing',
-      'Other'
-    ]
+      "Technology",
+      "Finance",
+      "Healthcare",
+      "Retail / E-commerce",
+      "Consulting",
+      "Manufacturing",
+      "Other",
+    ],
   },
   {
-    id: 'emailVolume',
+    id: "emailVolume",
     question: "How many emails do you receive daily?",
-    options: [
-      'Less than 20',
-      '20-50',
-      '50-100',
-      '100-200',
-      '200+ emails'
-    ]
+    options: ["Less than 20", "20-50", "50-100", "100-200", "200+ emails"],
   },
   {
-    id: 'communicationStyle',
+    id: "communicationStyle",
     question: "What's your preferred communication style?",
     options: [
-      'Direct and concise',
-      'Friendly and detailed',
-      'Professional and formal',
-      'Casual and conversational'
-    ]
+      "Direct and concise",
+      "Friendly and detailed",
+      "Professional and formal",
+      "Casual and conversational",
+    ],
   },
   {
-    id: 'emailsTo',
+    id: "emailsTo",
     question: "Who do you email most?",
     options: [
-      'Clients / Customers',
-      'Team members',
-      'Partners / Vendors',
-      'Internal executives',
-      'Mixed audience'
-    ]
-  }
+      "Clients / Customers",
+      "Team members",
+      "Partners / Vendors",
+      "Internal executives",
+      "Mixed audience",
+    ],
+  },
 ];
+
+interface UserAnswers {
+  role: string;
+  industry: string;
+  emailVolume: string;
+  communicationStyle: string;
+  emailsTo: string;
+}
 
 const UserQuestions = () => {
   const navigate = useNavigate();
   const { userAnswers, setUserAnswers } = useOnboarding();
   const [currentQuestion, setCurrentQuestion] = useState(0);
-  const [answers, setAnswers] = useState<Record<string, string>>({
+
+  const [answers, setAnswers] = useState<UserAnswers>({
     role: userAnswers.role,
     industry: userAnswers.industry,
     emailVolume: userAnswers.emailVolume,
     communicationStyle: userAnswers.communicationStyle,
     emailsTo: userAnswers.emailsTo,
   });
-  const [otherText, setOtherText] = useState('');
+  
+  const [otherText, setOtherText] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const currentQ = questions[currentQuestion];
-  const currentAnswer = answers[currentQ.id] || '';
-  const isOtherSelected = currentAnswer === 'Other';
+  const currentAnswer = answers[currentQ.id as keyof UserAnswers] || ""; 
+  const isOtherSelected = currentAnswer === "Other";
 
-  const handleNext = () => {
+  const handleNext = async () => {
     const finalAnswer = isOtherSelected && otherText ? otherText : currentAnswer;
-    const newAnswers = { ...answers, [currentQ.id]: finalAnswer };
+    
+    const newAnswers = { ...answers, [currentQ.id]: finalAnswer } as UserAnswers;
     setAnswers(newAnswers);
 
+    // If there are more questions, go to next
     if (currentQuestion < questions.length - 1) {
       setCurrentQuestion(currentQuestion + 1);
-      setOtherText('');
-    } else {
-      // Last question - save and continue
-      setUserAnswers({
-        role: newAnswers.role || '',
-        industry: newAnswers.industry || '',
-        emailVolume: newAnswers.emailVolume || '',
-        communicationStyle: newAnswers.communicationStyle || '',
-        emailsTo: newAnswers.emailsTo || '',
-      });
-      navigate('/onboarding/categories');
+      setOtherText("");
+      return;
     }
+
+    // ✅ Last question reached — Save answers and navigate to categories
+    setUserAnswers({
+      role: newAnswers.role || "",
+      industry: newAnswers.industry || "",
+      emailVolume: newAnswers.emailVolume || "",
+      communicationStyle: newAnswers.communicationStyle || "",
+      emailsTo: newAnswers.emailsTo || "",
+    });
+
+    // Simply navigate to categories page - the AI recommendation will happen there
+    navigate("/onboarding/categories");
   };
 
   const handleBack = () => {
     if (currentQuestion > 0) {
       setCurrentQuestion(currentQuestion - 1);
-      setOtherText('');
+      setOtherText("");
     } else {
-      navigate('/onboarding/oauth-auth');
+      navigate("/onboarding/oauth-auth");
     }
   };
 
@@ -120,7 +130,6 @@ const UserQuestions = () => {
 
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
-      {/* Progress Indicator */}
       <div className="w-full max-w-2xl mb-8">
         <div className="flex items-center justify-center gap-2">
           <div className="w-3 h-3 rounded-full bg-primary"></div>
@@ -155,14 +164,18 @@ const UserQuestions = () => {
 
           <RadioGroup
             value={currentAnswer}
-            onValueChange={(value) => setAnswers({ ...answers, [currentQ.id]: value })}
+            onValueChange={(value) => setAnswers({ ...answers, [currentQ.id]: value } as UserAnswers)}
             className="space-y-3"
           >
             {currentQ.options.map((option, index) => (
               <div key={index}>
-                <Card className={`p-4 cursor-pointer transition-all ${
-                  currentAnswer === option ? 'border-primary border-2 bg-primary/5' : 'border-2'
-                }`}>
+                <Card
+                  className={`p-4 cursor-pointer transition-all ${
+                    currentAnswer === option
+                      ? "border-primary border-2 bg-primary/5"
+                      : "border-2"
+                  }`}
+                >
                   <div className="flex items-center space-x-3">
                     <RadioGroupItem value={option} id={`option-${index}`} />
                     <Label htmlFor={`option-${index}`} className="flex-grow cursor-pointer">
@@ -170,8 +183,8 @@ const UserQuestions = () => {
                     </Label>
                   </div>
                 </Card>
-                
-                {option === 'Other' && currentAnswer === 'Other' && (
+
+                {option === "Other" && currentAnswer === "Other" && (
                   <div className="mt-3 ml-8">
                     <Input
                       placeholder="Please specify..."
@@ -187,18 +200,19 @@ const UserQuestions = () => {
         </div>
 
         <div className="flex items-center justify-between">
-          <Button
-            variant="ghost"
-            onClick={handleBack}
-          >
+          <Button variant="ghost" onClick={handleBack} disabled={loading}>
             Back
           </Button>
           <Button
             onClick={handleNext}
-            disabled={!canProceed}
+            disabled={!canProceed || loading}
             className="min-w-32"
           >
-            {currentQuestion < questions.length - 1 ? 'Next Question' : 'Continue'}
+            {loading
+              ? "Processing..."
+              : currentQuestion < questions.length - 1
+              ? "Next Question"
+              : "Continue"}
           </Button>
         </div>
       </Card>

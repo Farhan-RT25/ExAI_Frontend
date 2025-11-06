@@ -3,105 +3,117 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { useNavigate } from "react-router-dom";
-import { useOnboarding } from "@/contexts/OnboardingContext";
-import { Mail } from "lucide-react";
+import { Mail, Sparkles, Loader2 } from "lucide-react";
 
-const categories = [
-  {
-    id: 'to-respond',
-    name: 'To Respond',
-    description: 'Emails that require your action',
-    defaultRecommended: true,
+// Mock context and navigation for demo
+const useOnboarding = () => ({
+  userAnswers: {
+    role: "Sales / Business Development",
+    industry: "Technology",
+    emailVolume: "50-100",
+    communicationStyle: "Direct and concise",
+    emailsTo: "Clients / Customers"
   },
-  {
-    id: 'waiting-reply',
-    name: 'Waiting Reply',
-    description: "Emails where you're waiting for a response",
-    defaultRecommended: false,
-  },
-  {
-    id: 'notifications',
-    name: 'Notifications',
-    description: 'System alerts and automated emails',
-    defaultRecommended: false,
-  },
-  {
-    id: 'marketing',
-    name: 'Marketing',
-    description: 'Newsletters and promotional content',
-    defaultRecommended: false,
-  },
-  {
-    id: 'sales',
-    name: 'Sales',
-    description: 'Sales inquiries and opportunities',
-    defaultRecommended: false,
-  },
-  {
-    id: 'admin',
-    name: 'Admin',
-    description: 'Internal operations and paperwork',
-    defaultRecommended: false,
-  },
-  {
-    id: 'hr',
-    name: 'HR',
-    description: 'People and recruitment related emails',
-    defaultRecommended: false,
-  },
-  {
-    id: 'meeting-event',
-    name: 'Meeting/Event',
-    description: 'Calendar invites and meeting details',
-    defaultRecommended: false,
-  },
-  {
-    id: 'projects',
-    name: 'Projects',
-    description: 'Project-specific communications',
-    defaultRecommended: false,
-  },
-  {
-    id: 'personal',
-    name: 'Personal',
-    description: 'Personal and non-work emails',
-    defaultRecommended: false,
-  },
-];
+  selectedCategories: [],
+  setSelectedCategories: (cats: string[]) => console.log("Saved:", cats)
+});
+
+const useNavigate = () => (path: string) => console.log("Navigate to:", path);
+
+// API types
+interface CategoryRecommendation {
+  id: string;
+  name: string;
+  description: string;
+  recommended: boolean;
+  reason: string;
+}
 
 const CategorySelection = () => {
   const navigate = useNavigate();
   const { userAnswers, selectedCategories, setSelectedCategories } = useOnboarding();
+  
+  const [categories, setCategories] = useState<CategoryRecommendation[]>([]);
   const [selected, setSelected] = useState<string[]>(selectedCategories);
-  const [recommended, setRecommended] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
+  // Fetch AI recommendations on mount
   useEffect(() => {
-    // Determine recommended categories based on user role
-    const role = userAnswers.role.toLowerCase();
-    let recommendedIds = ['to-respond', 'waiting-reply', 'meeting-event'];
+    fetchRecommendations();
+  }, []);
 
-    if (role.includes('ceo') || role.includes('executive')) {
-      recommendedIds = ['to-respond', 'meeting-event', 'sales'];
-    } else if (role.includes('sales')) {
-      recommendedIds = ['sales', 'to-respond', 'meeting-event'];
-    } else if (role.includes('hr')) {
-      recommendedIds = ['hr', 'to-respond', 'meeting-event'];
-    } else if (role.includes('marketing')) {
-      recommendedIds = ['marketing', 'projects', 'to-respond'];
-    } else if (role.includes('engineer') || role.includes('developer')) {
-      recommendedIds = ['projects', 'notifications', 'to-respond'];
-    } else if (role.includes('manager')) {
-      recommendedIds = ['to-respond', 'meeting-event', 'projects'];
-    }
+  const fetchRecommendations = async () => {
+    try {
+      setLoading(true);
+      setError(null);
 
-    setRecommended(recommendedIds);
-    
-    // Pre-select recommended categories if no selection exists
-    if (selected.length === 0) {
+      // Get user ID from localStorage
+      const userJson = localStorage.getItem("user");
+      if (!userJson) {
+        throw new Error("User data not found. Please log in again.");
+      }
+      
+      const userData = JSON.parse(userJson);
+      const userId = Number(userData.user_id);
+
+      // Call recommendation API
+      const API_BASE = import.meta.env.VITE_API_BASE;
+      const token = localStorage.getItem("access_token");
+
+      const response = await fetch(`${API_BASE}/ai-onboarding/recommend-categories`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+          "ngrok-skip-browser-warning": "true",
+        },
+        body: JSON.stringify({
+          role: userAnswers.role,
+          industry: userAnswers.industry,
+          emailVolume: userAnswers.emailVolume,
+          communicationStyle: userAnswers.communicationStyle,
+          emailsTo: userAnswers.emailsTo,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to get recommendations");
+      }
+
+      const data = await response.json();
+      setCategories(data.categories);
+
+      // Pre-select recommended categories
+      const recommendedIds = data.categories
+        .filter((cat: CategoryRecommendation) => cat.recommended)
+        .map((cat: CategoryRecommendation) => cat.id);
+      
       setSelected(recommendedIds);
+
+    } catch (err: any) {
+      console.error("Error fetching recommendations:", err);
+      setError(err.message || "Failed to load categories");
+      
+      // Fallback to default categories
+      setCategories([
+        { id: 'to-respond', name: 'To Respond', description: 'Emails that require your action', recommended: true, reason: 'Essential for everyone' },
+        { id: 'waiting-reply', name: 'Waiting Reply', description: "Emails where you're waiting for a response", recommended: false, reason: '' },
+        { id: 'notifications', name: 'Notifications', description: 'System alerts and automated emails', recommended: false, reason: '' },
+        { id: 'marketing', name: 'Marketing', description: 'Newsletters and promotional content', recommended: false, reason: '' },
+        { id: 'sales', name: 'Sales', description: 'Sales inquiries and opportunities', recommended: true, reason: 'Matches your sales role' },
+        { id: 'admin', name: 'Admin', description: 'Internal operations and paperwork', recommended: false, reason: '' },
+        { id: 'hr', name: 'HR', description: 'People and recruitment related emails', recommended: false, reason: '' },
+        { id: 'meeting-event', name: 'Meeting/Event', description: 'Calendar invites and meeting details', recommended: true, reason: 'Important for client meetings' },
+        { id: 'projects', name: 'Projects', description: 'Project-specific communications', recommended: false, reason: '' },
+        { id: 'personal', name: 'Personal', description: 'Personal and non-work emails', recommended: false, reason: '' },
+      ]);
+      setSelected(['to-respond', 'sales', 'meeting-event']);
+    } finally {
+      setLoading(false);
     }
-  }, [userAnswers.role]);
+  };
 
   const toggleCategory = (categoryId: string) => {
     setSelected(prev =>
@@ -119,10 +131,79 @@ const CategorySelection = () => {
     setSelected([]);
   };
 
-  const handleFinish = () => {
-    setSelectedCategories(selected);
-    navigate('/onboarding/processing');
+  const handleFinish = async () => {
+    try {
+      setSaving(true);
+
+      // Get user ID
+      const userJson = localStorage.getItem("user");
+      if (!userJson) {
+        throw new Error("User data not found. Please log in again.");
+      }
+      
+      const userData = JSON.parse(userJson);
+      const userId = Number(userData.user_id);
+
+      // Save categories to backend
+      const API_BASE = import.meta.env.VITE_API_BASE;
+      const token = localStorage.getItem("access_token");
+
+      const response = await fetch(`${API_BASE}/ai-onboarding/save-categories?user_id=${userId}`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+          "ngrok-skip-browser-warning": "true",
+        },
+        body: JSON.stringify({
+          selected_category_ids: selected,
+          user_profile: {
+            role: userAnswers.role,
+            industry: userAnswers.industry,
+            emailVolume: userAnswers.emailVolume,
+            communicationStyle: userAnswers.communicationStyle,
+            emailsTo: userAnswers.emailsTo,
+          },
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to save categories");
+      }
+
+      // Save to context
+      setSelectedCategories(selected);
+
+      // Navigate to processing/completion
+      navigate('/onboarding/processing');
+
+    } catch (err: any) {
+      console.error("Error saving categories:", err);
+      alert(err.message || "Failed to save categories. Please try again.");
+    } finally {
+      setSaving(false);
+    }
   };
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
+        <Card className="w-full max-w-3xl p-12 shadow-card-hover">
+          <div className="flex flex-col items-center gap-4">
+            <div className="p-4 bg-primary/10 rounded-full">
+              <Sparkles className="h-12 w-12 text-primary animate-pulse" />
+            </div>
+            <h2 className="text-2xl font-bold text-center">AI is analyzing your profile...</h2>
+            <p className="text-muted-foreground text-center">
+              Personalizing category recommendations based on your answers
+            </p>
+            <Loader2 className="h-8 w-8 animate-spin text-primary mt-4" />
+          </div>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4 py-12">
@@ -145,7 +226,7 @@ const CategorySelection = () => {
           </div>
         </div>
 
-        <div className="flex items-start justify-between mb-8">
+        <div className="flex items-start justify-between mb-2">
           <div>
             <h1 className="text-3xl font-bold mb-2">Choose Your Email Categories</h1>
             <p className="text-muted-foreground">
@@ -162,10 +243,29 @@ const CategorySelection = () => {
           </div>
         </div>
 
+        {error && (
+          <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <p className="text-sm text-yellow-800">
+              <strong>Note:</strong> Using default recommendations. {error}
+            </p>
+          </div>
+        )}
+
+        <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg flex items-start gap-3">
+          <Sparkles className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
+          <div>
+            <p className="text-sm font-medium text-blue-900 mb-1">AI-Powered Recommendations</p>
+            <p className="text-sm text-blue-700">
+              Based on your role as <strong>{userAnswers.role}</strong> in <strong>{userAnswers.industry}</strong>, 
+              we've recommended the most relevant categories for you.
+            </p>
+          </div>
+        </div>
+
         <div className="grid gap-3 mb-8">
           {categories.map((category) => {
             const isSelected = selected.includes(category.id);
-            const isRecommended = recommended.includes(category.id);
+            const isRecommended = category.recommended;
 
             return (
               <Card
@@ -185,14 +285,20 @@ const CategorySelection = () => {
                     <div className="flex items-center gap-2 mb-1">
                       <h3 className="font-semibold">{category.name}</h3>
                       {isRecommended && (
-                        <Badge className="bg-primary text-primary-foreground">
+                        <Badge className="bg-primary text-primary-foreground gap-1">
+                          <Sparkles className="h-3 w-3" />
                           Recommended
                         </Badge>
                       )}
                     </div>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-sm text-muted-foreground mb-1">
                       {category.description}
                     </p>
+                    {isRecommended && category.reason && (
+                      <p className="text-xs text-primary font-medium">
+                        ✨ {category.reason}
+                      </p>
+                    )}
                   </div>
                 </div>
               </Card>
@@ -204,15 +310,23 @@ const CategorySelection = () => {
           <Button
             variant="ghost"
             onClick={() => navigate('/onboarding/questions')}
+            disabled={saving}
           >
             Back
           </Button>
           <Button
             onClick={handleFinish}
-            disabled={selected.length === 0}
+            disabled={selected.length === 0 || saving}
             className="min-w-32"
           >
-            Finish Setup
+            {saving ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              "Finish Setup"
+            )}
           </Button>
         </div>
       </Card>

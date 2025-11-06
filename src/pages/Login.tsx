@@ -7,6 +7,10 @@ import { Link, useNavigate } from "react-router-dom";
 import { Mail, Eye, EyeOff, Sparkles, Star } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { login, saveAuthData } from "@/lib/api/auth";
+import { initiateGoogleLogin } from "@/lib/api/google";
+import { initiateMicrosoftLogin } from "@/lib/api/microsoft";
+import { initiateZohoLogin } from "@/lib/api/zoho";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -16,6 +20,7 @@ const Login = () => {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isLoading, setIsLoading] = useState(false);
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -33,28 +38,56 @@ const Login = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!validateForm()) {
       return;
     }
 
-    // Simulate login - in real app would check credentials
-    toast({
-      title: "Logged in successfully!",
-      description: "Welcome back to Ex AI",
-    });
-    
-    // Simulate first-time user flow
-    navigate('/onboarding/email-connection');
+    setIsLoading(true);
+
+    try {
+      const authResponse = await login({ email, password });
+      
+      // Save auth data to localStorage
+      saveAuthData(authResponse);
+      
+      toast({
+        title: "Logged in successfully!",
+        description: `Welcome back, ${authResponse.user.full_name}`,
+      });
+      
+      // Navigate to dashboard
+      navigate('/dashboard');
+    } catch (error) {
+      toast({
+        title: "Login failed",
+        description: error instanceof Error ? error.message : "Invalid credentials",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleOAuthLogin = (provider: string) => {
-    toast({
-      title: `${provider} login`,
-      description: "OAuth integration coming soon",
-    });
+    switch (provider) {
+      case "Google":
+        initiateGoogleLogin();
+        break;
+      case "Microsoft":
+        initiateMicrosoftLogin();
+        break;
+      case "Zoho":
+        initiateZohoLogin();
+        break;
+      default:
+        toast({
+          title: `${provider} login`,
+          description: "Provider not configured",
+        });
+    }
   };
 
   return (
@@ -133,6 +166,7 @@ const Login = () => {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className={`mt-1.5 ${errors.email ? "border-danger" : ""}`}
+                disabled={isLoading}
               />
               {errors.email && (
                 <p className="text-xs text-danger mt-1">{errors.email}</p>
@@ -149,11 +183,13 @@ const Login = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className={`${errors.password ? "border-danger pr-10" : "pr-10"}`}
+                  disabled={isLoading}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  disabled={isLoading}
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
@@ -169,8 +205,12 @@ const Login = () => {
               </Link>
             </div>
 
-            <Button type="submit" className="w-full h-11 text-base bg-primary hover:bg-primary-dark">
-              Sign in
+            <Button 
+              type="submit" 
+              className="w-full h-11 text-base bg-primary hover:bg-primary-dark"
+              disabled={isLoading}
+            >
+              {isLoading ? "Signing in..." : "Sign in"}
             </Button>
           </form>
 
@@ -179,6 +219,7 @@ const Login = () => {
             className="w-full h-11 text-base"
             onClick={() => handleOAuthLogin("Google")}
             type="button"
+            disabled={isLoading}
           >
             <svg className="mr-2 h-5 w-5" viewBox="0 0 24 24">
               <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -195,6 +236,7 @@ const Login = () => {
               className="w-full h-11 text-base"
               onClick={() => handleOAuthLogin("Microsoft")}
               type="button"
+              disabled={isLoading}
             >
               <svg className="mr-2 h-5 w-5" viewBox="0 0 24 24">
                 <path fill="#F25022" d="M1 1h10v10H1z"/>
@@ -210,6 +252,7 @@ const Login = () => {
               className="w-full h-11 text-base"
               onClick={() => handleOAuthLogin("Zoho")}
               type="button"
+              disabled={isLoading}
             >
               <Mail className="mr-2 h-5 w-5" />
               Continue with Zoho
