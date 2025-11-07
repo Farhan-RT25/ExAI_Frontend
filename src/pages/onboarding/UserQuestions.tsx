@@ -77,56 +77,98 @@ const UserQuestions = () => {
   const [currentQuestion, setCurrentQuestion] = useState(0);
 
   const [answers, setAnswers] = useState<UserAnswers>({
-    role: userAnswers.role,
-    industry: userAnswers.industry,
-    emailVolume: userAnswers.emailVolume,
-    communicationStyle: userAnswers.communicationStyle,
-    emailsTo: userAnswers.emailsTo,
+    role: userAnswers.role || "",
+    industry: userAnswers.industry || "",
+    emailVolume: userAnswers.emailVolume || "",
+    communicationStyle: userAnswers.communicationStyle || "",
+    emailsTo: userAnswers.emailsTo || "",
   });
   
-  const [otherText, setOtherText] = useState("");
+  const [otherTexts, setOtherTexts] = useState<{ [key: string]: string }>({});
   const [loading, setLoading] = useState(false);
 
   const currentQ = questions[currentQuestion];
   const currentAnswer = answers[currentQ.id as keyof UserAnswers] || ""; 
+  const currentOtherText = otherTexts[currentQ.id] || "";
   const isOtherSelected = currentAnswer === "Other";
 
+  // Restore otherText on question change
+  useState(() => {
+    if (isOtherSelected) {
+      setOtherTexts((prev) => ({ ...prev, [currentQ.id]: currentOtherText }));
+    }
+  });
+
+  const handleAnswerChange = (value: string) => {
+    setAnswers((prev) => ({ ...prev, [currentQ.id]: value } as UserAnswers));
+    if (value !== "Other") {
+      setOtherTexts((prev) => {
+        const newOther = { ...prev };
+        delete newOther[currentQ.id];
+        return newOther;
+      });
+    }
+  };
+
+  const handleOtherTextChange = (value: string) => {
+    setOtherTexts((prev) => ({ ...prev, [currentQ.id]: value }));
+  };
+
   const handleNext = async () => {
-    const finalAnswer = isOtherSelected && otherText ? otherText : currentAnswer;
-    
+    let finalAnswer = currentAnswer;
+    if (isOtherSelected && currentOtherText.trim()) {
+      finalAnswer = currentOtherText.trim();
+    } else if (isOtherSelected) {
+      return; // Don't proceed if Other is selected but no text
+    }
+
     const newAnswers = { ...answers, [currentQ.id]: finalAnswer } as UserAnswers;
     setAnswers(newAnswers);
 
     // If there are more questions, go to next
     if (currentQuestion < questions.length - 1) {
       setCurrentQuestion(currentQuestion + 1);
-      setOtherText("");
       return;
     }
 
-    // ✅ Last question reached — Save answers and navigate to categories
-    setUserAnswers({
-      role: newAnswers.role || "",
-      industry: newAnswers.industry || "",
-      emailVolume: newAnswers.emailVolume || "",
-      communicationStyle: newAnswers.communicationStyle || "",
-      emailsTo: newAnswers.emailsTo || "",
-    });
+    // Last question: Validate all answers are filled
+    const hasAllAnswers = Object.values(newAnswers).every((ans) => ans.trim().length > 0);
+    if (!hasAllAnswers) {
+      // Optionally show error toast here
+      console.warn("Incomplete answers detected");
+      return;
+    }
 
-    // Simply navigate to categories page - the AI recommendation will happen there
-    navigate("/onboarding/categories");
+    setLoading(true);
+    try {
+      // Save to context
+      setUserAnswers(newAnswers);
+
+      // Small delay for UX (simulate processing)
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      // Navigate to categories page - AI recommendation will happen there
+      navigate("/onboarding/categories");
+    } catch (error) {
+      console.error("Error saving answers:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleBack = () => {
     if (currentQuestion > 0) {
+      // Save current otherText before going back
+      if (isOtherSelected && currentOtherText.trim()) {
+        setOtherTexts((prev) => ({ ...prev, [currentQ.id]: currentOtherText }));
+      }
       setCurrentQuestion(currentQuestion - 1);
-      setOtherText("");
     } else {
       navigate("/onboarding/oauth-auth");
     }
   };
 
-  const canProceed = currentAnswer && (!isOtherSelected || otherText.trim());
+  const canProceed = (currentAnswer && currentAnswer !== "Other") || (isOtherSelected && currentOtherText.trim().length > 0);
 
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
@@ -135,10 +177,10 @@ const UserQuestions = () => {
           <div className="w-3 h-3 rounded-full bg-primary"></div>
           <div className="w-3 h-3 rounded-full bg-primary"></div>
           <div className="w-3 h-3 rounded-full bg-primary"></div>
-          <div className="w-3 h-3 rounded-full bg-primary"></div>
+          <div className="w-3 h-3 rounded-full bg-muted"></div>
           <div className="w-3 h-3 rounded-full bg-muted"></div>
         </div>
-        <p className="text-center text-sm text-muted-foreground mt-2">Step 3 of 4</p>
+        <p className="text-center text-sm text-muted-foreground mt-2">Step 3 of 5</p>
       </div>
 
       <Card className="w-full max-w-2xl p-8 shadow-card-hover">
@@ -164,7 +206,7 @@ const UserQuestions = () => {
 
           <RadioGroup
             value={currentAnswer}
-            onValueChange={(value) => setAnswers({ ...answers, [currentQ.id]: value } as UserAnswers)}
+            onValueChange={handleAnswerChange}
             className="space-y-3"
           >
             {currentQ.options.map((option, index) => (
@@ -173,12 +215,12 @@ const UserQuestions = () => {
                   className={`p-4 cursor-pointer transition-all ${
                     currentAnswer === option
                       ? "border-primary border-2 bg-primary/5"
-                      : "border-2"
+                      : "border-2 border-border hover:border-primary/50"
                   }`}
                 >
                   <div className="flex items-center space-x-3">
-                    <RadioGroupItem value={option} id={`option-${index}`} />
-                    <Label htmlFor={`option-${index}`} className="flex-grow cursor-pointer">
+                    <RadioGroupItem value={option} id={`option-${currentQuestion}-${index}`} />
+                    <Label htmlFor={`option-${currentQuestion}-${index}`} className="flex-grow cursor-pointer">
                       {option}
                     </Label>
                   </div>
@@ -188,9 +230,10 @@ const UserQuestions = () => {
                   <div className="mt-3 ml-8">
                     <Input
                       placeholder="Please specify..."
-                      value={otherText}
-                      onChange={(e) => setOtherText(e.target.value)}
+                      value={currentOtherText}
+                      onChange={(e) => handleOtherTextChange(e.target.value)}
                       className="max-w-md"
+                      disabled={loading}
                     />
                   </div>
                 )}

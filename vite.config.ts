@@ -11,7 +11,7 @@ export default defineConfig(({ mode }) => ({
     allowedHosts: [
       "localhost",
       "127.0.0.1",
-      "579a65efffd4.ngrok-free.app", // 👈 your ngrok domain
+      "83ec6a2c8584.ngrok-free.app", // 👈 your ngrok domain
     ],
   },
   plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),

@@ -4,21 +4,9 @@ import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Mail, Sparkles, Loader2 } from "lucide-react";
-
-// Mock context and navigation for demo
-const useOnboarding = () => ({
-  userAnswers: {
-    role: "Sales / Business Development",
-    industry: "Technology",
-    emailVolume: "50-100",
-    communicationStyle: "Direct and concise",
-    emailsTo: "Clients / Customers"
-  },
-  selectedCategories: [],
-  setSelectedCategories: (cats: string[]) => console.log("Saved:", cats)
-});
-
-const useNavigate = () => (path: string) => console.log("Navigate to:", path);
+import { useNavigate } from "react-router-dom";
+import { useOnboarding } from "@/contexts/OnboardingContext";
+import { recommendCategories, saveUserCategories } from "@/lib/api/onboarding";
 
 // API types
 interface CategoryRecommendation {
@@ -49,40 +37,15 @@ const CategorySelection = () => {
       setLoading(true);
       setError(null);
 
-      // Get user ID from localStorage
-      const userJson = localStorage.getItem("user");
-      if (!userJson) {
-        throw new Error("User data not found. Please log in again.");
-      }
-      
-      const userData = JSON.parse(userJson);
-      const userId = Number(userData.user_id);
-
-      // Call recommendation API
-      const API_BASE = import.meta.env.VITE_API_BASE;
-      const token = localStorage.getItem("access_token");
-
-      const response = await fetch(`${API_BASE}/ai-onboarding/recommend-categories`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-          "ngrok-skip-browser-warning": "true",
-        },
-        body: JSON.stringify({
-          role: userAnswers.role,
-          industry: userAnswers.industry,
-          emailVolume: userAnswers.emailVolume,
-          communicationStyle: userAnswers.communicationStyle,
-          emailsTo: userAnswers.emailsTo,
-        }),
+      // Call recommendation API using the imported function
+      const data = await recommendCategories({
+        role: userAnswers.role,
+        industry: userAnswers.industry,
+        emailVolume: userAnswers.emailVolume,
+        communicationStyle: userAnswers.communicationStyle,
+        emailsTo: userAnswers.emailsTo,
       });
 
-      if (!response.ok) {
-        throw new Error("Failed to get recommendations");
-      }
-
-      const data = await response.json();
       setCategories(data.categories);
 
       // Pre-select recommended categories
@@ -144,32 +107,17 @@ const CategorySelection = () => {
       const userData = JSON.parse(userJson);
       const userId = Number(userData.user_id);
 
-      // Save categories to backend
-      const API_BASE = import.meta.env.VITE_API_BASE;
-      const token = localStorage.getItem("access_token");
-
-      const response = await fetch(`${API_BASE}/ai-onboarding/save-categories?user_id=${userId}`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-          "ngrok-skip-browser-warning": "true",
+      // Save categories using the imported function
+      await saveUserCategories(userId, {
+        selected_category_ids: selected,
+        user_profile: {
+          role: userAnswers.role,
+          industry: userAnswers.industry,
+          emailVolume: userAnswers.emailVolume,
+          communicationStyle: userAnswers.communicationStyle,
+          emailsTo: userAnswers.emailsTo,
         },
-        body: JSON.stringify({
-          selected_category_ids: selected,
-          user_profile: {
-            role: userAnswers.role,
-            industry: userAnswers.industry,
-            emailVolume: userAnswers.emailVolume,
-            communicationStyle: userAnswers.communicationStyle,
-            emailsTo: userAnswers.emailsTo,
-          },
-        }),
       });
-
-      if (!response.ok) {
-        throw new Error("Failed to save categories");
-      }
 
       // Save to context
       setSelectedCategories(selected);
@@ -214,9 +162,9 @@ const CategorySelection = () => {
           <div className="w-3 h-3 rounded-full bg-primary"></div>
           <div className="w-3 h-3 rounded-full bg-primary"></div>
           <div className="w-3 h-3 rounded-full bg-primary"></div>
-          <div className="w-3 h-3 rounded-full bg-primary"></div>
+          <div className="w-3 h-3 rounded-full bg-muted"></div>
         </div>
-        <p className="text-center text-sm text-muted-foreground mt-2">Step 4 of 4</p>
+        <p className="text-center text-sm text-muted-foreground mt-2">Step 4 of 5</p>
       </div>
 
       <Card className="w-full max-w-3xl p-8 shadow-card-hover">
