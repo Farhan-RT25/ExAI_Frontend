@@ -24,32 +24,38 @@ const testimonials = [
 
 export const Testimonials = () => {
   return (
-    <section id="testimonials" className="py-24 bg-background">
-      <div className="container mx-auto px-4">
+    <section id="testimonials" className="py-20 md:py-32 bg-muted/30">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Section header */}
         <div className="text-center mb-16 animate-fade-up">
-          <h2 className="text-4xl md:text-5xl font-bold mb-4">Trusted by Professionals</h2>
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4">
+            Trusted by Professionals Worldwide
+          </h2>
+          <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto">
             See what busy executives are saying about Ex AI
           </p>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+        {/* Testimonials grid */}
+        <div className="grid md:grid-cols-3 gap-6 md:gap-8 max-w-6xl mx-auto">
           {testimonials.map((testimonial, index) => (
             <div
               key={index}
-              className="bg-card rounded-xl p-8 shadow-card hover:shadow-card-hover transition-all duration-300 animate-fade-up"
+              className="group bg-card rounded-2xl p-8 shadow-sm hover:shadow-lg transition-all duration-300 animate-fade-up border border-border hover:border-primary/20"
               style={{ animationDelay: `${index * 0.1}s` }}
             >
-              <Quote className="h-8 w-8 text-primary mb-4" />
-              <p className="text-muted-foreground mb-6 leading-relaxed">{testimonial.content}</p>
-              <div className="flex items-center gap-3">
-                <Avatar>
-                  <AvatarFallback className="bg-gradient-primary text-primary-foreground">
+              <Quote className="h-10 w-10 text-primary/20 mb-6 transition-colors group-hover:text-primary/40" />
+              <p className="text-muted-foreground mb-6 leading-relaxed text-base">
+                "{testimonial.content}"
+              </p>
+              <div className="flex items-center gap-4 pt-4 border-t border-border">
+                <Avatar className="h-12 w-12">
+                  <AvatarFallback className="bg-gradient-primary text-primary-foreground font-semibold">
                     {testimonial.avatar}
                   </AvatarFallback>
                 </Avatar>
                 <div>
-                  <div className="font-semibold">{testimonial.name}</div>
+                  <div className="font-semibold text-foreground">{testimonial.name}</div>
                   <div className="text-sm text-muted-foreground">{testimonial.role}</div>
                 </div>
               </div>
