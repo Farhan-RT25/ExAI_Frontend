@@ -1,4 +1,4 @@
-import { Home, Tag, FileEdit, Video, Link2, Settings, LogOut } from "lucide-react";
+import { Home, Tag, FileEdit, Video, Link2, Settings, LogOut, X } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -59,11 +59,22 @@ export function AppSidebar() {
     <Sidebar collapsible="icon" variant="floating">
       <SidebarContent className="bg-card rounded-sm border border-border shadow-sm" >
         <div className="p-2 border-b border-sidebar-border">
-          <div className="flex items-center gap-2">
-            <div className="p-2 mb-5 mt-2 bg-gradient-primary rounded-lg">
-              <Mail className="h-4 w-4 text-primary-foreground" />
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <div className="p-2 mb-5 mt-2 bg-gradient-primary rounded-lg">
+                <Mail className="h-4 w-4 text-primary-foreground" />
+              </div>
+              {!isCollapsed && <span className="font-semibold mb-3">Ex AI</span>}
             </div>
-            {!isCollapsed && <span className="font-semibold mb-3">Ex AI</span>}
+            {isMobile && (
+              <button
+                onClick={() => setOpenMobile(false)}
+                className="p-2 hover:bg-muted rounded-lg transition-colors mb-3"
+                aria-label="Close sidebar"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
           </div>
         </div>
 

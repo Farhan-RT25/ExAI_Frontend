@@ -183,29 +183,29 @@ const Drafts = () => {
             {accounts.map((account) => (
               <div
                 key={account.id}
-                className="flex items-center justify-between p-4 rounded-lg hover:bg-muted/50 transition-colors border border-border"
+                className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 rounded-lg hover:bg-muted/50 transition-colors border border-border"
               >
-                <div className="flex items-center gap-3 flex-1">
-                  <div className={`w-2 h-2 rounded-full ${account.color}`} />
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                  <div className={`w-2 h-2 rounded-full flex-shrink-0 ${account.color}`} />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium">{account.name}</p>
                     <p className="text-xs text-muted-foreground truncate">{account.email}</p>
                   </div>
                   {account.customPrompt && (
-                    <Badge variant="secondary" className="text-xs">
+                    <Badge variant="secondary" className="text-xs flex-shrink-0">
                       Custom
                     </Badge>
                   )}
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 sm:flex-shrink-0">
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => openAccountSettings(account)}
-                    className="text-xs h-8"
+                    className="text-xs h-8 flex-1 sm:flex-none"
                   >
-                    <Settings className="h-3.5 w-3.5 mr-1.5" />
-                    Configure
+                    <Settings className="h-3.5 w-3.5 sm:mr-1.5" />
+                    <span className="hidden sm:inline">Configure</span>
                   </Button>
                   <Switch
                     checked={account.draftsEnabled}

@@ -182,18 +182,20 @@ const DashboardHome = () => {
             {currentData.activity.map((activity, index) => (
               <div
                 key={index}
-                className="flex items-center gap-4 p-4 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
+                className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
               >
-                <Avatar>
-                  <AvatarFallback className="bg-gradient-primary text-primary-foreground">
-                    {activity.avatar}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{activity.sender}</p>
-                  <p className="text-xs text-muted-foreground truncate">{activity.subject}</p>
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                  <Avatar className="flex-shrink-0">
+                    <AvatarFallback className="bg-gradient-primary text-primary-foreground">
+                      {activity.avatar}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{activity.sender}</p>
+                    <p className="text-xs text-muted-foreground truncate">{activity.subject}</p>
+                  </div>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center flex-wrap gap-2 sm:gap-3">
                   <Badge variant="secondary" className="text-xs">{activity.category}</Badge>
                   <Badge
                     className={`text-xs ${
@@ -206,7 +208,7 @@ const DashboardHome = () => {
                   >
                     {activity.status}
                   </Badge>
-                  <span className="text-xs text-muted-foreground min-w-[100px] text-right">
+                  <span className="text-xs text-muted-foreground w-full sm:w-auto sm:min-w-[100px] text-left sm:text-right">
                     {activity.date}
                   </span>
                 </div>
