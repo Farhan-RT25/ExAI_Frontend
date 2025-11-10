@@ -169,7 +169,7 @@ const Signup = () => {
 
       {/* Right Side - Form */}
       <div className="w-full lg:w-1/2 flex items-center justify-center p-8">
-        <Card className="w-full max-w-md p-8 border-border shadow-card">
+        <Card className="w-full max-w-md p-8 border-none bg-background shadow-card">
           <div className="flex justify-center mb-6">
             <div className="p-2 bg-primary/10 rounded-lg">
               <Mail className="h-6 w-6 text-primary" />

@@ -146,7 +146,7 @@ const Login = () => {
 
       {/* Right Side - Form */}
       <div className="w-full lg:w-1/2 flex items-center justify-center p-8">
-        <Card className="w-full max-w-md p-8 border-border shadow-card">
+        <Card className="w-full max-w-md p-8 border-0 bg-background shadow-card">
           <div className="flex justify-center mb-6">
             <div className="p-2 bg-primary/10 rounded-lg">
               <Mail className="h-6 w-6 text-primary" />
@@ -216,7 +216,7 @@ const Login = () => {
 
           <Button 
             variant="outline" 
-            className="w-full h-11 text-base"
+            className="oauth-slide-btn w-full"
             onClick={() => handleOAuthLogin("Google")}
             type="button"
             disabled={isLoading}
@@ -233,7 +233,7 @@ const Login = () => {
           <div className="mt-4 space-y-3">
             <Button 
               variant="outline" 
-              className="w-full h-11 text-base"
+              className="oauth-slide-btn w-full"
               onClick={() => handleOAuthLogin("Microsoft")}
               type="button"
               disabled={isLoading}
@@ -249,7 +249,7 @@ const Login = () => {
             
             <Button 
               variant="outline" 
-              className="w-full h-11 text-base"
+              className="oauth-slide-btn w-full"
               onClick={() => handleOAuthLogin("Zoho")}
               type="button"
               disabled={isLoading}

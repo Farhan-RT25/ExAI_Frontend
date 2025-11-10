@@ -6,7 +6,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { useNavigate } from "react-router-dom";
 import { useOnboarding } from "@/contexts/OnboardingContext";
-import { Check, X, Mail, Trash2, Loader2 } from "lucide-react";
+import { Check, X, Mail, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { addEmails, EmailAccountRequest } from "@/lib/api/emails";
 
@@ -23,73 +23,95 @@ const EmailConnection = () => {
   const { toast } = useToast();
   const initializedFromContext = useRef(false);
   
-  // Initialize emails from context if available (from OAuth signup)
-  const [emails, setEmails] = useState<EmailEntry[]>(() => {
+  // Initialize single email from context if available (from OAuth signup)
+  const [email, setEmail] = useState<EmailEntry>(() => {
     if (emailAccounts && emailAccounts.length > 0) {
-      return emailAccounts.map(acc => ({
-        address: acc.address,
-        provider: acc.provider,
-        type: acc.type,
-        validated: acc.validated
-      }));
+      const firstAccount = emailAccounts[0];
+      return {
+        address: firstAccount.address,
+        provider: firstAccount.provider,
+        type: firstAccount.type,
+        validated: firstAccount.validated
+      };
     }
-    return [{ address: '', provider: '', type: '', validated: false }];
+    return { address: '', provider: '', type: '', validated: false };
   });
   
   const [isLoading, setIsLoading] = useState(false);
 
-  // Update emails when context changes (e.g., when navigating from OAuth)
+  // Update email when context changes (e.g., when navigating from OAuth)
   useEffect(() => {
     if (emailAccounts && emailAccounts.length > 0 && !initializedFromContext.current) {
-      setEmails(emailAccounts.map(acc => ({
-        address: acc.address,
-        provider: acc.provider,
-        type: acc.type,
-        validated: acc.validated
-      })));
+      const firstAccount = emailAccounts[0];
+      setEmail({
+        address: firstAccount.address,
+        provider: firstAccount.provider,
+        type: firstAccount.type,
+        validated: firstAccount.validated
+      });
       initializedFromContext.current = true;
     }
   }, [emailAccounts]);
 
-  const validateEmail = (email: string) => {
+  const validateEmail = (emailAddress: string) => {
     const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return regex.test(email);
+    return regex.test(emailAddress);
   };
 
-  const handleEmailChange = (index: number, value: string) => {
-    const newEmails = [...emails];
-    newEmails[index].address = value;
-    newEmails[index].validated = validateEmail(value);
-    setEmails(newEmails);
-  };
-
-  const handleProviderChange = (index: number, value: string) => {
-    const newEmails = [...emails];
-    newEmails[index].provider = value as 'google' | 'microsoft' | 'zoho';
-    setEmails(newEmails);
-  };
-
-  const handleTypeChange = (index: number, value: string) => {
-    const newEmails = [...emails];
-    newEmails[index].type = value as 'work' | 'personal';
-    setEmails(newEmails);
-  };
-
-  const addEmail = () => {
-    if (emails.length < 5) {
-      setEmails([...emails, { address: '', provider: '', type: '', validated: false }]);
+  // Auto-detect provider based on email domain
+  const detectProvider = (emailAddress: string): 'google' | 'microsoft' | 'zoho' | '' => {
+    const domain = emailAddress.toLowerCase().split('@')[1];
+    
+    if (!domain) return '';
+    
+    // Google domains
+    if (domain === 'gmail.com' || domain === 'googlemail.com') {
+      return 'google';
     }
-  };
-
-  const removeEmail = (index: number) => {
-    if (emails.length > 1) {
-      setEmails(emails.filter((_, i) => i !== index));
+    
+    // Microsoft domains
+    if (domain === 'outlook.com' || domain === 'hotmail.com' || 
+        domain === 'live.com' || domain === 'msn.com') {
+      return 'microsoft';
     }
+    
+    // Zoho domains
+    if (domain === 'zoho.com' || domain === 'zohomail.com') {
+      return 'zoho';
+    }
+    
+    // For custom domains, don't auto-select
+    return '';
   };
 
-  const canContinue = emails.some(
-    (email) => email.validated && email.provider && email.type
-  );
+  const handleEmailChange = (value: string) => {
+    const isValid = validateEmail(value);
+    const detectedProvider = isValid ? detectProvider(value) : '';
+    
+    setEmail(prev => ({
+      ...prev,
+      address: value,
+      validated: isValid,
+      // Auto-set provider if detected, otherwise keep existing selection
+      provider: detectedProvider || prev.provider
+    }));
+  };
+
+  const handleProviderChange = (value: string) => {
+    setEmail(prev => ({
+      ...prev,
+      provider: value as 'google' | 'microsoft' | 'zoho'
+    }));
+  };
+
+  const handleTypeChange = (value: string) => {
+    setEmail(prev => ({
+      ...prev,
+      type: value as 'work' | 'personal'
+    }));
+  };
+
+  const canContinue = email.validated && email.provider && email.type;
 
   // Helper function to map frontend provider to API service_provider
   const mapProviderToServiceProvider = (provider: 'google' | 'microsoft' | 'zoho'): 'gmail' | 'microsoft' | 'zoho' => {
@@ -98,14 +120,10 @@ const EmailConnection = () => {
   };
 
   const handleContinue = async () => {
-    const validEmails = emails.filter(
-      (email) => email.validated && email.provider && email.type
-    );
-    
-    if (validEmails.length === 0) {
+    if (!canContinue) {
       toast({
-        title: "No valid emails",
-        description: "Please add at least one valid email account",
+        title: "Incomplete information",
+        description: "Please provide a valid email address, select a provider, and choose an email type",
         variant: "destructive",
       });
       return;
@@ -115,35 +133,35 @@ const EmailConnection = () => {
 
     try {
       // Map to API format
-      const emailRequests: EmailAccountRequest[] = validEmails.map(e => ({
-        email: e.address,
-        service_provider: mapProviderToServiceProvider(e.provider as 'google' | 'microsoft' | 'zoho'),
-        type: e.type as 'personal' | 'work'
-      }));
+      const emailRequest: EmailAccountRequest = {
+        email: email.address,
+        service_provider: mapProviderToServiceProvider(email.provider as 'google' | 'microsoft' | 'zoho'),
+        type: email.type as 'personal' | 'work'
+      };
 
-      // Save emails to database
-      await addEmails(emailRequests);
+      // Save email to database
+      await addEmails([emailRequest]);
 
-      // Update context with the emails
-      setEmailAccounts(validEmails.map(e => ({
-        address: e.address,
-        provider: e.provider as 'google' | 'microsoft' | 'zoho',
-        type: e.type as 'work' | 'personal',
+      // Update context with the email
+      setEmailAccounts([{
+        address: email.address,
+        provider: email.provider as 'google' | 'microsoft' | 'zoho',
+        type: email.type as 'work' | 'personal',
         validated: true
-      })));
+      }]);
       
       toast({
-        title: "Emails saved!",
-        description: `Successfully added ${validEmails.length} email account(s)`,
+        title: "Email saved!",
+        description: "Successfully added your email account",
       });
 
       // Navigate to OAuth authorization
       navigate('/onboarding/oauth-auth');
     } catch (error) {
-      console.error('Failed to save emails:', error);
+      console.error('Failed to save email:', error);
       toast({
-        title: "Failed to save emails",
-        description: error instanceof Error ? error.message : "Could not save email accounts. Please try again.",
+        title: "Failed to save email",
+        description: error instanceof Error ? error.message : "Could not save email account. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -157,12 +175,12 @@ const EmailConnection = () => {
       <div className="w-full max-w-2xl mb-8">
         <div className="flex items-center justify-center gap-2">
           <div className="w-3 h-3 rounded-full bg-primary"></div>
-          <div className="w-3 h-3 rounded-full bg-primary"></div>
+          <div className="w-3 h-3 rounded-full bg-muted"></div>
           <div className="w-3 h-3 rounded-full bg-muted"></div>
           <div className="w-3 h-3 rounded-full bg-muted"></div>
           <div className="w-3 h-3 rounded-full bg-muted"></div>
         </div>
-        <p className="text-center text-sm text-muted-foreground mt-2">Step 1 of 4</p>
+        <p className="text-center text-sm text-muted-foreground mt-2">Step 1 of 5</p>
       </div>
 
       <Card className="w-full max-w-2xl p-8 shadow-card-hover">
@@ -172,100 +190,92 @@ const EmailConnection = () => {
           </div>
         </div>
 
-        <h1 className="text-3xl font-bold text-center mb-2">Connect Your Email Accounts</h1>
+        <h1 className="text-3xl font-bold text-center mb-2">Connect Your Email Account</h1>
         <p className="text-muted-foreground text-center mb-8">
-          Add the email accounts you want Ex AI to manage (up to 5 accounts)
+          Add your primary email account that you want Ex AI to manage
         </p>
 
         <div className="space-y-6">
-          {emails.map((email, index) => (
-            <Card key={index} className="p-6 border-2">
-              <div className="flex items-start justify-between mb-4">
-                <h3 className="font-semibold">Email Account {index + 1}</h3>
-                {emails.length > 1 && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => removeEmail(index)}
-                    className="h-8 w-8"
-                  >
-                    <Trash2 className="h-4 w-4 text-danger" />
-                  </Button>
+          <Card className="p-6 border-2">
+            <h3 className="font-semibold mb-4">Email Account</h3>
+
+            <div className="space-y-4">
+              <div className="relative">
+                <Label className="mb-2 block">Email Address:</Label>
+                <Input
+                  type="email"
+                  placeholder="Enter your email address"
+                  value={email.address}
+                  onChange={(e) => handleEmailChange(e.target.value)}
+                  className="pr-10"
+                />
+                {email.address && (
+                  <div className="absolute right-3 top-[38px] -translate-y-1/2">
+                    {email.validated ? (
+                      <Check className="h-5 w-5 text-success" />
+                    ) : (
+                      <X className="h-5 w-5 text-danger" />
+                    )}
+                  </div>
+                )}
+                {email.validated && email.provider && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Provider auto-detected: {email.provider === 'google' ? 'Google' : email.provider === 'microsoft' ? 'Microsoft' : 'Zoho'}
+                  </p>
                 )}
               </div>
 
-              <div className="space-y-4">
-                <div className="relative">
-                  <Input
-                    type="email"
-                    placeholder="Enter email address"
-                    value={email.address}
-                    onChange={(e) => handleEmailChange(index, e.target.value)}
-                    className="pr-10"
-                  />
-                  {email.address && (
-                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                      {email.validated ? (
-                        <Check className="h-5 w-5 text-success" />
-                      ) : (
-                        <X className="h-5 w-5 text-danger" />
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                <div>
-                  <Label className="mb-2 block">Provider:</Label>
-                  <RadioGroup
-                    value={email.provider}
-                    onValueChange={(value) => handleProviderChange(index, value)}
-                    className="flex gap-4"
-                  >
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="google" id={`google-${index}`} />
-                      <Label htmlFor={`google-${index}`}>Google</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="microsoft" id={`microsoft-${index}`} />
-                      <Label htmlFor={`microsoft-${index}`}>Microsoft</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="zoho" id={`zoho-${index}`} />
-                      <Label htmlFor={`zoho-${index}`}>Zoho</Label>
-                    </div>
-                  </RadioGroup>
-                </div>
-
-                <div>
-                  <Label className="mb-2 block">Email Type:</Label>
-                  <RadioGroup
-                    value={email.type}
-                    onValueChange={(value) => handleTypeChange(index, value)}
-                    className="flex gap-4"
-                  >
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="work" id={`work-${index}`} />
-                      <Label htmlFor={`work-${index}`}>Work</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="personal" id={`personal-${index}`} />
-                      <Label htmlFor={`personal-${index}`}>Personal</Label>
-                    </div>
-                  </RadioGroup>
-                </div>
+              <div>
+                <Label className="mb-2 block">Provider:</Label>
+                <RadioGroup
+                  value={email.provider}
+                  onValueChange={handleProviderChange}
+                  className="flex gap-4"
+                >
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="google" id="google" />
+                    <Label htmlFor="google" className="cursor-pointer">Google</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="microsoft" id="microsoft" />
+                    <Label htmlFor="microsoft" className="cursor-pointer">Microsoft</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="zoho" id="zoho" />
+                    <Label htmlFor="zoho" className="cursor-pointer">Zoho</Label>
+                  </div>
+                </RadioGroup>
               </div>
-            </Card>
-          ))}
 
-          {emails.length < 5 && (
-            <Button
-              variant="outline"
-              className="w-full"
-              onClick={addEmail}
-            >
-              + Add Another Email
-            </Button>
-          )}
+              <div>
+                <Label className="mb-2 block">Email Type:</Label>
+                <RadioGroup
+                  value={email.type}
+                  onValueChange={handleTypeChange}
+                  className="flex gap-4"
+                >
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="work" id="work" />
+                    <Label htmlFor="work" className="cursor-pointer">Work</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="personal" id="personal" />
+                    <Label htmlFor="personal" className="cursor-pointer">Personal</Label>
+                  </div>
+                </RadioGroup>
+              </div>
+            </div>
+          </Card>
+
+          {/* Commented out for future multi-account support
+          <Button
+            variant="outline"
+            className="w-full"
+            onClick={addEmail}
+          >
+            + Add Another Email
+          </Button>
+          */}
         </div>
 
         <div className="flex items-center justify-between mt-8">

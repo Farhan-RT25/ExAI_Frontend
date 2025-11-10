@@ -13,6 +13,14 @@ export default {
       },
     },
     extend: {
+      // fontFamily: {
+      //   // This line overrides Tailwind's default 'sans' font stack
+      //   // 'Inter' must be the CSS font name (the one you load via @import or <link>)
+      //   sans: ['Inter', 'sans-serif'], 
+        
+      //   // OPTIONAL: Add a new custom font stack you can reference as 'font-heading'
+      //   heading: ['YourHeadingFont', 'serif'], 
+      // },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",

@@ -29,7 +29,7 @@ All colors MUST be HSL.
 
     --info: 210 79% 46%;
     --info-foreground: 0 0% 100%;
-    
+
     --teal: 174 62% 47%;
     --teal-foreground: 0 0% 100%;
 
@@ -56,7 +56,7 @@ All colors MUST be HSL.
 
     --gradient-primary: linear-gradient(135deg, hsl(258 90% 66%), hsl(270 80% 70%));
     --gradient-hero: linear-gradient(135deg, hsl(258 90% 66%) 0%, hsl(270 80% 70%) 100%);
-    
+
     --shadow-card: 0 4px 6px -1px rgb(0 0 0 / 0.07), 0 2px 4px -2px rgb(0 0 0 / 0.07);
     --shadow-card-hover: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
 
@@ -78,5 +78,64 @@ All colors MUST be HSL.
 
   body {
     @apply bg-background text-foreground;
+  }
+
+  /* In your index.css file, define the custom component style */
+
+  .oauth-slide-btn {
+    /* Layout and Base Style */
+    @apply flex justify-center items-center gap-2;
+    /* Use your system colors */
+    background-color: hsl(var(--background));
+    border: 2px solid hsl(var(--primary));
+    color: hsl(var(--foreground));
+
+    /* Size and Shape */
+    @apply w-[250px] h-[40px] px-4 py-2 rounded-md;
+
+    /* Typography and Cursor */
+    @apply text-base font-semibold cursor-pointer;
+
+    /* Custom Effects (Box-Shadow and Transition) */
+    box-shadow: 4px 4px hsl(var(--primary) / 0.1);
+    transition: all 250ms;
+    position: relative;
+    /* Essential for pseudo-element positioning */
+    overflow: hidden;
+    /* Essential to hide ::before before it slides */
+    z-index: 1;
+  }
+
+  /* ------------------------------------------------ */
+  /* Pseudo-element for the Slide Effect */
+  /* ------------------------------------------------ */
+
+  .oauth-slide-btn::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 0;
+    /* Use a dark color for the slide-over effect */
+    background-color: hsl(var(--primary));
+    z-index: -1;
+    box-shadow: 4px 8px 19px -3px rgba(0, 0, 0, 0.27);
+    transition: all 250ms;
+  }
+
+  /* ------------------------------------------------ */
+  /* Hover States */
+  /* ------------------------------------------------ */
+
+  .oauth-slide-btn:hover {
+    /* Set the text color change on hover */
+    color: hsl(var(--primary-foreground));
+    /* e.g., white, for contrast */
+  }
+
+  .oauth-slide-btn:hover::before {
+    /* Makes the pseudo-element slide across */
+    width: 100%;
   }
 }
