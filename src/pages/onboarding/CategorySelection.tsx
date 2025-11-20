@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { Mail, Sparkles, Loader2 } from "lucide-react";
+import { Mail, Sparkles, Loader2, CheckCircle2, XCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useOnboarding } from "@/contexts/OnboardingContext";
 import { recommendCategories, saveUserCategories } from "@/lib/api/onboarding";
@@ -26,6 +26,7 @@ const CategorySelection = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showConfirmation, setShowConfirmation] = useState(false);
 
   // Fetch AI recommendations on mount
   useEffect(() => {
@@ -94,7 +95,15 @@ const CategorySelection = () => {
     setSelected([]);
   };
 
-  const handleFinish = async () => {
+  const handleContinue = () => {
+    if (selected.length === 0) {
+      alert("Please select at least one category");
+      return;
+    }
+    setShowConfirmation(true);
+  };
+
+  const handleConfirmationResponse = async (agree: boolean) => {
     try {
       setSaving(true);
 
@@ -117,6 +126,7 @@ const CategorySelection = () => {
           communicationStyle: userAnswers.communicationStyle,
           emailsTo: userAnswers.emailsTo,
         },
+        is_categories_agree: agree,
       });
 
       // Save to context
@@ -128,7 +138,6 @@ const CategorySelection = () => {
     } catch (err: any) {
       console.error("Error saving categories:", err);
       alert(err.message || "Failed to save categories. Please try again.");
-    } finally {
       setSaving(false);
     }
   };
@@ -153,6 +162,112 @@ const CategorySelection = () => {
     );
   }
 
+  // Confirmation screen
+  if (showConfirmation) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4 py-12">
+        {/* Progress Indicator */}
+        <div className="w-full max-w-3xl mb-8">
+          <div className="flex items-center justify-center gap-2">
+            <div className="w-3 h-3 rounded-full bg-primary"></div>
+            <div className="w-3 h-3 rounded-full bg-primary"></div>
+            <div className="w-3 h-3 rounded-full bg-primary"></div>
+            <div className="w-3 h-3 rounded-full bg-primary"></div>
+            <div className="w-3 h-3 rounded-full bg-primary"></div>
+          </div>
+          <p className="text-center text-sm text-muted-foreground mt-2">Step 5 of 5</p>
+        </div>
+
+        <Card className="w-full max-w-3xl p-8 shadow-card-hover">
+          <div className="flex justify-center mb-6">
+            <div className="p-3 bg-gradient-primary rounded-xl">
+              <Mail className="h-8 w-8 text-primary-foreground" />
+            </div>
+          </div>
+
+          <h1 className="text-3xl font-bold mb-2 text-center">Apply Categories to Your Inbox?</h1>
+          <p className="text-muted-foreground text-center mb-8">
+            Would you like Ex AI to automatically organize your emails using these {selected.length} categories?
+          </p>
+
+          {/* Selected Categories Preview */}
+          <div className="mb-8 p-6 bg-muted/50 rounded-lg">
+            <h3 className="font-semibold mb-3 flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-primary" />
+              Selected Categories ({selected.length})
+            </h3>
+            <div className="flex flex-wrap gap-2">
+              {categories
+                .filter(cat => selected.includes(cat.id))
+                .map(cat => (
+                  <Badge key={cat.id} variant="secondary" className="text-sm py-1 px-3">
+                    {cat.name}
+                  </Badge>
+                ))}
+            </div>
+          </div>
+
+          <div className="space-y-4 mb-8">
+            <div
+              className="p-4 bg-green-50 border border-green-200 rounded-lg cursor-pointer hover:bg-green-100"
+              onClick={() => handleConfirmationResponse(true)}
+            >
+              <div className="flex items-start gap-3">
+                <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="font-medium text-green-900 mb-1">Yes, organize my inbox</p>
+                  <p className="text-sm text-green-700">
+                    Ex AI will automatically categorize your emails and help you stay organized
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div
+              className="p-4 bg-gray-50 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-100"
+              onClick={() => handleConfirmationResponse(false)}
+            >
+              <div className="flex items-start gap-3">
+                <XCircle className="h-5 w-5 text-gray-600 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="font-medium text-gray-900 mb-1">No, not right now</p>
+                  <p className="text-sm text-gray-700">
+                    Your preferences will be saved, but categories won't be applied to incoming emails
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between gap-4">
+            <Button
+              variant="ghost"
+              onClick={() => setShowConfirmation(false)}
+              disabled={saving}
+            >
+              Back
+            </Button>
+            <Button
+              onClick={() => handleConfirmationResponse(true)}
+              disabled={saving}
+              className="min-w-32"
+            >
+              {saving ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>Finish Setup</>
+              )}
+            </Button>
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
+  // Category selection screen
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4 py-12">
       {/* Progress Indicator */}
@@ -263,18 +378,11 @@ const CategorySelection = () => {
             Back
           </Button>
           <Button
-            onClick={handleFinish}
-            disabled={selected.length === 0 || saving}
+            onClick={handleContinue}
+            disabled={selected.length === 0}
             className="min-w-32"
           >
-            {saving ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Saving...
-              </>
-            ) : (
-              "Finish Setup"
-            )}
+            Continue
           </Button>
         </div>
       </Card>

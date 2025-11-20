@@ -29,6 +29,7 @@ export interface CategoryRecommendationResponse {
 export interface SaveCategoriesRequest {
   selected_category_ids: string[];
   user_profile: UserProfileRequest;
+  is_categories_agree: boolean;
 }
 
 export interface OrganizeAccountResponse {

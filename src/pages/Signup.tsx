@@ -8,7 +8,7 @@ import { Mail, Eye, EyeOff, Sparkles, Star } from "lucide-react";
 import { useOnboarding } from "@/contexts/OnboardingContext";
 import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { signup, saveAuthData } from "@/lib/api/auth";
+import { signupAndGetRedirect, saveAuthData } from "@/lib/api/auth";
 import { initiateGoogleSignup } from "@/lib/api/google";
 import { initiateMicrosoftSignup } from "@/lib/api/microsoft";
 import { initiateZohoSignup } from "@/lib/api/zoho";
@@ -59,9 +59,11 @@ const Signup = () => {
     }
 
     setIsLoading(true);
+    setErrors({});
 
     try {
-      const authResponse = await signup({
+      // Use the enhanced signup function that determines redirect
+      const authResponse = await signupAndGetRedirect({
         email,
         full_name: fullName,
         password,
@@ -74,19 +76,42 @@ const Signup = () => {
       setFullName(fullName);
       setOnboardingEmail(email);
       
+      // Show success toast
       toast({
-        title: "Account created!",
-        description: "Let's connect your email accounts",
+        title: "Account created successfully!",
+        description: `Welcome, ${authResponse.user.full_name}! Let's set up your account.`,
       });
       
-      // Navigate to onboarding
-      navigate('/onboarding/email-connection');
+      // Navigate based on the redirect path determined by the backend
+      navigate(`/${authResponse.redirect}`, { replace: true });
+
     } catch (error) {
-      toast({
-        title: "Signup failed",
-        description: error instanceof Error ? error.message : "Could not create account",
-        variant: "destructive",
-      });
+      console.error('Signup error:', error);
+      
+      const errorMessage = error instanceof Error ? error.message : "Signup failed";
+      
+      // Handle specific error cases
+      if (errorMessage.includes('You already have an account')) {
+        toast({
+          title: "Account already exists",
+          description: "You already have an account. Please login instead.",
+          variant: "destructive",
+        });
+        
+        // Redirect to login page after showing error
+        setTimeout(() => {
+          navigate('/login', { replace: true });
+        }, 2000);
+      } else {
+        toast({
+          title: "Signup failed",
+          description: errorMessage,
+          variant: "destructive",
+        });
+        
+        // Set form errors for display
+        setErrors({ general: errorMessage });
+      }
     } finally {
       setIsLoading(false);
     }
@@ -107,6 +132,7 @@ const Signup = () => {
         toast({
           title: `${provider} sign up`,
           description: "Provider not configured",
+          variant: "destructive",
         });
     }
   };
@@ -179,6 +205,13 @@ const Signup = () => {
           <h1 className="text-2xl font-bold text-center mb-2">Sign up</h1>
           <p className="text-sm text-muted-foreground text-center mb-8">Start your 30-day free trial.</p>
           
+          {/* Show general error message */}
+          {errors.general && (
+            <div className="mb-4 p-3 bg-destructive/10 border border-destructive/20 rounded-md">
+              <p className="text-sm text-destructive">{errors.general}</p>
+            </div>
+          )}
+          
           <form onSubmit={handleSubmit} className="space-y-4 mb-6">
             <div>
               <Label htmlFor="fullName" className="text-sm font-medium">Name*</Label>
@@ -187,7 +220,13 @@ const Signup = () => {
                 type="text"
                 placeholder="Enter your name"
                 value={fullName}
-                onChange={(e) => setFullNameLocal(e.target.value)}
+                onChange={(e) => {
+                  setFullNameLocal(e.target.value);
+                  // Clear errors when user starts typing
+                  if (errors.fullName) {
+                    setErrors(prev => ({ ...prev, fullName: '' }));
+                  }
+                }}
                 className={`mt-1.5 ${errors.fullName ? "border-danger" : ""}`}
                 disabled={isLoading}
               />
@@ -203,7 +242,13 @@ const Signup = () => {
                 type="email"
                 placeholder="Enter your email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  // Clear errors when user starts typing
+                  if (errors.email) {
+                    setErrors(prev => ({ ...prev, email: '' }));
+                  }
+                }}
                 className={`mt-1.5 ${errors.email ? "border-danger" : ""}`}
                 disabled={isLoading}
               />
@@ -220,7 +265,13 @@ const Signup = () => {
                   type={showPassword ? "text" : "password"}
                   placeholder="Create a password"
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    // Clear errors when user starts typing
+                    if (errors.password) {
+                      setErrors(prev => ({ ...prev, password: '' }));
+                    }
+                  }}
                   className={`${errors.password ? "border-danger pr-10" : "pr-10"}`}
                   disabled={isLoading}
                 />

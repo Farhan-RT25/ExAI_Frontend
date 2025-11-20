@@ -32,10 +32,10 @@ export const Features = () => {
         {/* Section header */}
         <div className="text-center mb-16 animate-fade-up">
           <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4">
-            Endorsed by the Best in the Business
+            A Smarter Way to Work
           </h2>
           <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto">
-            From global brands to fast-growing startups, our work earns recognition from the people who matter most
+            Explore the AI-driven features designed to automate your inbox, generate replies, and deliver meeting insights instantly.
           </p>
         </div>
 

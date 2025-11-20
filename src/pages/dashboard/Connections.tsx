@@ -50,9 +50,9 @@ const initialConnections = [
     ],
   },
   {
-    id: "yahoo",
-    provider: "Yahoo Mail",
-    description: "Connect your Yahoo Mail accounts",
+    id: "zoho",
+    provider: "Zoho Mail",
+    description: "Connect your Zoho Mail accounts",
     logo: (
       <svg className="h-10 w-10" viewBox="0 0 24 24">
         <path fill="#6001D2" d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm4.5 7.5l-3 6v3h-3v-3l-3-6h2.5l1.5 3 1.5-3h2.5z"/>
@@ -60,17 +60,17 @@ const initialConnections = [
     ),
     accounts: [],
   },
-  {
-    id: "icloud",
-    provider: "iCloud Mail",
-    description: "Connect your iCloud email accounts",
-    logo: (
-      <svg className="h-10 w-10" viewBox="0 0 24 24">
-        <path fill="#3693F3" d="M13.762 4.29a6.51 6.51 0 0 0-5.669 3.332 3.571 3.571 0 0 0-1.558-.36 3.571 3.571 0 0 0-3.516 3A4.918 4.918 0 0 0 0 14.796a4.918 4.918 0 0 0 4.92 4.914 4.93 4.93 0 0 0 .617-.045h14.42c2.305-.272 4.041-2.258 4.043-4.589v-1.616a4.543 4.543 0 0 0-3.93-4.508 7.212 7.212 0 0 0-6.308-4.653z"/>
-      </svg>
-    ),
-    accounts: [],
-  },
+  // {
+  //   id: "icloud",
+  //   provider: "iCloud Mail",
+  //   description: "Connect your iCloud email accounts",
+  //   logo: (
+  //     <svg className="h-10 w-10" viewBox="0 0 24 24">
+  //       <path fill="#3693F3" d="M13.762 4.29a6.51 6.51 0 0 0-5.669 3.332 3.571 3.571 0 0 0-1.558-.36 3.571 3.571 0 0 0-3.516 3A4.918 4.918 0 0 0 0 14.796a4.918 4.918 0 0 0 4.92 4.914 4.93 4.93 0 0 0 .617-.045h14.42c2.305-.272 4.041-2.258 4.043-4.589v-1.616a4.543 4.543 0 0 0-3.93-4.508 7.212 7.212 0 0 0-6.308-4.653z"/>
+  //     </svg>
+  //   ),
+  //   accounts: [],
+  // },
 ];
 
 const Connections = () => {
@@ -129,8 +129,7 @@ const Connections = () => {
   return (
     <div className="space-y-4 md:space-y-6">
       <div>
-        <h1 className="text-xl md:text-2xl font-bold mb-1.5">Connections</h1>
-        <p className="text-sm text-muted-foreground">Manage your connected email accounts</p>
+        <p className="text-md text-muted-foreground">Manage your connected email accounts</p>
       </div>
 
       {/* Tabs */}

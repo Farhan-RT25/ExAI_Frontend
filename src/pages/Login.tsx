@@ -7,7 +7,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { Mail, Eye, EyeOff, Sparkles, Star } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { login, saveAuthData } from "@/lib/api/auth";
+import { loginAndGetRedirect, saveAuthData } from "@/lib/api/auth";
 import { initiateGoogleLogin } from "@/lib/api/google";
 import { initiateMicrosoftLogin } from "@/lib/api/microsoft";
 import { initiateZohoLogin } from "@/lib/api/zoho";
@@ -46,32 +46,60 @@ const Login = () => {
     }
 
     setIsLoading(true);
+    setErrors({});
 
     try {
-      const authResponse = await login({ email, password });
+      // Use the enhanced login function that determines redirect
+      const authResponse = await loginAndGetRedirect({ email, password });
       
       // Save auth data to localStorage
       saveAuthData(authResponse);
       
+      // Show success toast
       toast({
         title: "Logged in successfully!",
-        description: `Welcome back, ${authResponse.user.full_name}`,
+        description: `Welcome back, ${authResponse.user.full_name || authResponse.user.email}`,
       });
       
-      // Navigate to dashboard
-      navigate('/dashboard');
+      // Navigate based on the redirect path determined by the backend
+      navigate(`/${authResponse.redirect}`, { replace: true });
+
     } catch (error) {
-      toast({
-        title: "Login failed",
-        description: error instanceof Error ? error.message : "Invalid credentials",
-        variant: "destructive",
-      });
+      console.error('Login error:', error);
+      
+      const errorMessage = error instanceof Error ? error.message : "Login failed";
+      
+      // Handle specific error cases
+      if (errorMessage.includes('Invalid User – Sign up first')) {
+        toast({
+          title: "Account not found",
+          description: "Invalid User – Sign up first",
+          variant: "destructive",
+        });
+        
+        // Redirect to signup page after showing error
+        setTimeout(() => {
+          navigate('/signup', { replace: true });
+        }, 2000);
+      } else {
+        toast({
+          title: "Login failed",
+          description: errorMessage,
+          variant: "destructive",
+        });
+        
+        // Set form errors for display
+        if (errorMessage.includes('email') || errorMessage.includes('password')) {
+          setErrors({ general: errorMessage });
+        }
+      }
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleOAuthLogin = (provider: string) => {
+    // Add cache busting and intent tracking
     switch (provider) {
       case "Google":
         initiateGoogleLogin();
@@ -86,6 +114,7 @@ const Login = () => {
         toast({
           title: `${provider} login`,
           description: "Provider not configured",
+          variant: "destructive",
         });
     }
   };
@@ -93,7 +122,7 @@ const Login = () => {
   return (
     <div className="min-h-screen flex bg-background">
       {/* Left Side - Hero */}
-      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-primary via-primary-dark to-[hsl(250,80%,55%)] p-12 flex-col justify-between text-primary-foreground relative overflow-hidden">
+      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-primary via-primary-dark to-[hsl(250,80%,55%)] p-12 flex-col justify-start gap-y-16 text-primary-foreground relative overflow-hidden">
         {/* Decorative elements */}
         <div className="absolute top-20 left-16 animate-float">
           <Sparkles className="h-8 w-8 opacity-80" />
@@ -146,7 +175,7 @@ const Login = () => {
 
       {/* Right Side - Form */}
       <div className="w-full lg:w-1/2 flex items-center justify-center p-8">
-        <Card className="w-full max-w-md p-8 border-0 bg-background shadow-card">
+        <Card className="w-full max-w-md p-2 border-0 bg-background shadow-card">
           <div className="flex justify-center mb-6">
             <div className="p-2 bg-primary/10 rounded-lg">
               <Mail className="h-6 w-6 text-primary" />
@@ -156,6 +185,13 @@ const Login = () => {
           <h1 className="text-2xl font-bold text-center mb-2">Log in</h1>
           <p className="text-sm text-muted-foreground text-center mb-8">Welcome back! Please enter your details.</p>
           
+          {/* Show general error message */}
+          {errors.general && (
+            <div className="mb-4 p-3 bg-destructive/10 border border-destructive/20 rounded-md">
+              <p className="text-sm text-destructive">{errors.general}</p>
+            </div>
+          )}
+          
           <form onSubmit={handleSubmit} className="space-y-4 mb-6">
             <div>
               <Label htmlFor="email" className="text-sm font-medium">Email*</Label>
@@ -164,7 +200,13 @@ const Login = () => {
                 type="email"
                 placeholder="Enter your email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  // Clear errors when user starts typing
+                  if (errors.email) {
+                    setErrors(prev => ({ ...prev, email: '' }));
+                  }
+                }}
                 className={`mt-1.5 ${errors.email ? "border-danger" : ""}`}
                 disabled={isLoading}
               />
@@ -181,7 +223,13 @@ const Login = () => {
                   type={showPassword ? "text" : "password"}
                   placeholder="Enter your password"
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    // Clear errors when user starts typing
+                    if (errors.password) {
+                      setErrors(prev => ({ ...prev, password: '' }));
+                    }
+                  }}
                   className={`${errors.password ? "border-danger pr-10" : "pr-10"}`}
                   disabled={isLoading}
                 />

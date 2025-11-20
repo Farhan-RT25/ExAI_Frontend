@@ -92,8 +92,7 @@ const Drafts = () => {
   return (
     <div className="space-y-4 md:space-y-6">
       <div>
-        <h1 className="text-xl md:text-2xl font-bold mb-1.5">Draft Reply Settings</h1>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-md text-muted-foreground">
           Configure how AI generates draft responses for your emails
         </p>
       </div>
@@ -168,7 +167,7 @@ const Drafts = () => {
       </Card>
 
       {/* Account-Specific Settings */}
-      <Card className="shadow-card hover:shadow-card-hover transition-all border-border">
+      {/* <Card className="shadow-card hover:shadow-card-hover transition-all border-border">
         <CardHeader className="pb-3 pt-5 px-5">
           <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
             Account-Specific Settings
@@ -216,10 +215,10 @@ const Drafts = () => {
             ))}
           </div>
         </CardContent>
-      </Card>
+      </Card> */}
 
       {/* Global Draft Prompt */}
-      <Card className="shadow-card hover:shadow-card-hover transition-all border-border">
+      {/* <Card className="shadow-card hover:shadow-card-hover transition-all border-border">
         <CardHeader className="pb-3 pt-5 px-5">
           <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
             Global Draft Prompt
@@ -252,10 +251,10 @@ const Drafts = () => {
             </Button>
           </div>
         </CardContent>
-      </Card>
+      </Card> */}
 
       {/* Account-Specific Prompt Dialog */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      {/* <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="sm:max-w-[550px]">
           <DialogHeader>
             <DialogTitle className="text-xl font-semibold">
@@ -306,7 +305,7 @@ const Drafts = () => {
             </Button>
           </DialogFooter>
         </DialogContent>
-      </Dialog>
+      </Dialog> */}
     </div>
   );
 };

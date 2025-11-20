@@ -9,6 +9,7 @@ import { useOnboarding } from "@/contexts/OnboardingContext";
 import { Check, X, Mail, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { addEmails, EmailAccountRequest } from "@/lib/api/emails";
+import { getAuthStatusAndRedirect } from "@/lib/api/auth";
 
 interface EmailEntry {
   address: string;
@@ -22,6 +23,7 @@ const EmailConnection = () => {
   const { emailAccounts, setEmailAccounts } = useOnboarding();
   const { toast } = useToast();
   const initializedFromContext = useRef(false);
+  const [authLoading, setAuthLoading] = useState(true);
   
   // Initialize single email from context if available (from OAuth signup)
   const [email, setEmail] = useState<EmailEntry>(() => {
@@ -38,6 +40,51 @@ const EmailConnection = () => {
   });
   
   const [isLoading, setIsLoading] = useState(false);
+
+  // Check authentication on mount
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        setAuthLoading(true);
+        
+        const { isAuthenticated, redirect } = await getAuthStatusAndRedirect();
+        
+        if (!isAuthenticated) {
+          // Not authenticated - redirect to login
+          navigate('/login', { replace: true });
+          return;
+        }
+        
+        if (redirect === 'dashboard') {
+          // User has already completed onboarding - redirect to dashboard
+          toast({
+            title: "Setup Complete",
+            description: "Your account is already set up",
+            variant: "default",
+          });
+          navigate('/dashboard', { replace: true });
+          return;
+        }
+        
+        // User is authenticated and should be in onboarding - continue
+        
+      } catch (error) {
+        console.error("Auth check failed:", error);
+        
+        toast({
+          title: "Authentication Error",
+          description: "Please login again",
+          variant: "destructive",
+        });
+        
+        navigate('/login', { replace: true });
+      } finally {
+        setAuthLoading(false);
+      }
+    };
+
+    checkAuth();
+  }, [navigate, toast]);
 
   // Update email when context changes (e.g., when navigating from OAuth)
   useEffect(() => {
@@ -157,6 +204,7 @@ const EmailConnection = () => {
 
       // Navigate to OAuth authorization
       navigate('/onboarding/oauth-auth');
+
     } catch (error) {
       console.error('Failed to save email:', error);
       toast({
@@ -168,6 +216,20 @@ const EmailConnection = () => {
       setIsLoading(false);
     }
   };
+
+  // Show loading state while checking authentication
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
+        <div className="w-full max-w-2xl">
+          <div className="animate-pulse space-y-8">
+            <div className="w-full h-6 bg-muted rounded"></div>
+            <div className="w-full h-96 bg-muted rounded-lg"></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
@@ -198,7 +260,7 @@ const EmailConnection = () => {
         <div className="space-y-6">
           <Card className="p-6 border-2">
             <h3 className="font-semibold mb-4">Email Account</h3>
-
+            
             <div className="space-y-4">
               <div className="relative">
                 <Label className="mb-2 block">Email Address:</Label>
@@ -208,6 +270,7 @@ const EmailConnection = () => {
                   value={email.address}
                   onChange={(e) => handleEmailChange(e.target.value)}
                   className="pr-10"
+                  disabled={isLoading}
                 />
                 {email.address && (
                   <div className="absolute right-3 top-[38px] -translate-y-1/2">
@@ -231,6 +294,7 @@ const EmailConnection = () => {
                   value={email.provider}
                   onValueChange={handleProviderChange}
                   className="flex gap-4"
+                  disabled={isLoading}
                 >
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="google" id="google" />
@@ -253,6 +317,7 @@ const EmailConnection = () => {
                   value={email.type}
                   onValueChange={handleTypeChange}
                   className="flex gap-4"
+                  disabled={isLoading}
                 >
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="work" id="work" />
@@ -282,6 +347,7 @@ const EmailConnection = () => {
           <Button
             variant="ghost"
             onClick={() => navigate('/signup')}
+            disabled={isLoading}
           >
             Back
           </Button>

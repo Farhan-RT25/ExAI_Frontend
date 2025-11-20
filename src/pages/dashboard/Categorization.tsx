@@ -15,7 +15,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Plus, Mail, Clock, Bell, Megaphone, DollarSign, FileText, Users, Calendar, HelpCircle } from "lucide-react";
+import { Plus, Mail, Clock, Bell, Megaphone, DollarSign, FileText, Users, Calendar } from "lucide-react";
 
 const emailAccounts = [
   { id: "work", name: "Work", email: "kristin.watson@company.com" },
@@ -24,14 +24,70 @@ const emailAccounts = [
 ];
 
 const initialCategories = [
-  { id: 1, name: "To Respond", icon: Mail, count: 145, color: "bg-info", active: true },
-  { id: 2, name: "Waiting Reply", icon: Clock, count: 89, color: "bg-warning", active: true },
-  { id: 3, name: "Notifications", icon: Bell, count: 267, color: "bg-primary", active: true },
-  { id: 4, name: "Marketing", icon: Megaphone, count: 412, color: "bg-success", active: true },
-  { id: 5, name: "Sales", icon: DollarSign, count: 178, color: "bg-danger", active: true },
-  { id: 6, name: "Admin", icon: FileText, count: 234, color: "bg-accent", active: true },
-  { id: 7, name: "HR", icon: Users, count: 56, color: "bg-secondary", active: false },
-  { id: 8, name: "Meeting/Event", icon: Calendar, count: 98, color: "bg-primary", active: true },
+  { 
+    id: 1, 
+    name: "To Respond", 
+    icon: Mail, 
+    color: "bg-blue-500", 
+    active: true,
+    description: "Emails requiring your immediate response"
+  },
+  { 
+    id: 2, 
+    name: "Waiting Reply", 
+    icon: Clock, 
+    color: "bg-amber-500", 
+    active: true,
+    description: "Awaiting responses from recipients"
+  },
+  { 
+    id: 3, 
+    name: "Notifications", 
+    icon: Bell,  
+    color: "bg-purple-500", 
+    active: true,
+    description: "System and service notifications"
+  },
+  { 
+    id: 4, 
+    name: "Marketing", 
+    icon: Megaphone,  
+    color: "bg-green-500", 
+    active: true,
+    description: "Promotional and marketing content"
+  },
+  { 
+    id: 5, 
+    name: "Sales", 
+    icon: DollarSign,  
+    color: "bg-emerald-500", 
+    active: true,
+    description: "Sales inquiries and opportunities"
+  },
+  { 
+    id: 6, 
+    name: "Admin", 
+    icon: FileText,  
+    color: "bg-slate-500", 
+    active: true,
+    description: "Administrative and internal matters"
+  },
+  { 
+    id: 7, 
+    name: "HR", 
+    icon: Users,  
+    color: "bg-pink-500", 
+    active: false,
+    description: "Human resources and personnel"
+  },
+  { 
+    id: 8, 
+    name: "Meeting/Event", 
+    icon: Calendar,  
+    color: "bg-indigo-500", 
+    active: true,
+    description: "Calendar invites and event details"
+  },
 ];
 
 const Categorization = () => {
@@ -69,7 +125,6 @@ const Categorization = () => {
 
   const handleSubmit = () => {
     setIsSubmitting(true);
-    // Simulate API call
     setTimeout(() => {
       console.log("New category:", formData);
       setDialogOpen(false);
@@ -81,11 +136,10 @@ const Categorization = () => {
   const filteredCategories = getFilteredCategories();
 
   return (
-    <div className="space-y-4 md:space-y-6">
+    <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
         <div>
-          <h1 className="text-xl md:text-2xl font-bold mb-1.5">Manage Categories</h1>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-md text-muted-foreground">
             Select which categories to use for organizing your emails
           </p>
         </div>
@@ -137,33 +191,40 @@ const Categorization = () => {
         </div>
       </div>
 
-      <div className="grid gap-5">
+      {/* Grid Layout for Categories */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
         {filteredCategories.map((category) => (
-          <Card key={category.id} className="shadow-card hover:shadow-card-hover transition-all border-border">
+          <Card 
+            key={category.id} 
+            className={`shadow-md hover:shadow-lg transition-all border-border relative overflow-hidden ${
+              !category.active ? 'opacity-60' : ''
+            }`}
+          >
             <CardHeader className="pb-3 pt-5 px-5">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4 flex-1">
-                  <div className={`p-2.5 ${category.color} rounded-lg`}>
-                    <category.icon className="h-5 w-5 text-white" />
-                  </div>
-                  <div className="flex-1">
-                    <CardTitle className="text-sm font-semibold mb-1">
-                      {category.name}
-                    </CardTitle>
-                    <p className="text-xs text-muted-foreground">
-                      {category.count} emails in this category
-                    </p>
-                  </div>
-                  <Badge variant="secondary" className="text-sm px-3 py-1">
-                    {category.count}
-                  </Badge>
+              <div className="flex items-start justify-between mb-3">
+                <div className={`p-3 ${category.color} rounded-xl shadow-sm`}>
+                  <category.icon className="h-6 w-6 text-white" />
                 </div>
                 <Switch
                   checked={category.active}
                   onCheckedChange={(checked) => handleToggle(category.id, checked)}
                 />
               </div>
+              <CardTitle className="text-base font-semibold mb-1">
+                {category.name}
+              </CardTitle>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                {category.description}
+              </p>
             </CardHeader>
+            {/* <CardContent className="px-5 pb-5">
+              <div className="flex items-center justify-between pt-3 border-t border-border">
+                <span className="text-xs text-muted-foreground font-medium">Total Emails</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-2xl font-bold">{category.count}</span>
+                </div>
+              </div>
+            </CardContent> */}
           </Card>
         ))}
       </div>

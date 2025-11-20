@@ -141,13 +141,7 @@ const Processing = () => {
                 </div>
               ))}
             </div>
-
-            <Progress value={progress} className="mb-4" />
             
-            <p className="text-sm text-muted-foreground">
-              {Math.round(progress)}% complete
-            </p>
-
             {/* Show organization progress if available */}
             {organizationResult && (
               <div className="mt-4 p-3 bg-primary/10 rounded-lg">

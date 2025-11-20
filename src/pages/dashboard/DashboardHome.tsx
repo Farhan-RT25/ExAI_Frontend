@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Mail, Clock, TrendingUp, MessageSquare, HelpCircle, ChevronDown, Check } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -11,6 +12,8 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
+import { useToast } from "@/hooks/use-toast";
+import { getAuthStatusAndRedirect, type User } from "@/lib/api/auth";
 
 const emailAccounts = [
   { id: "all", name: "All Accounts", email: "", color: "bg-gradient-primary" },
@@ -80,26 +83,150 @@ const accountData = {
 
 const DashboardHome = () => {
   const [selectedAccount, setSelectedAccount] = useState("all");
+  const [user, setUser] = useState<User | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [dataLoading, setDataLoading] = useState(false);
+  const navigate = useNavigate();
+  const { toast } = useToast();
+
   const currentAccount = emailAccounts.find(acc => acc.id === selectedAccount);
   const currentData = accountData[selectedAccount];
+
+  useEffect(() => {
+    const checkAuthAndLoadUser = async () => {
+      try {
+        setAuthLoading(true);
+        
+        // Check authentication status and determine redirect
+        const { isAuthenticated, redirect, user: authUser } = await getAuthStatusAndRedirect();
+        
+        if (!isAuthenticated) {
+          // Not authenticated - redirect to login
+          navigate('/login', { replace: true });
+          return;
+        }
+        
+        if (redirect === 'onboarding') {
+          // User exists but needs onboarding - redirect to onboarding
+          toast({
+            title: "Setup Required",
+            description: "Please complete your account setup",
+            variant: "default",
+          });
+          navigate('/onboarding/email-connection', { replace: true });
+          return;
+        }
+        
+        // User is authenticated and has completed onboarding
+        if (authUser) {
+          setUser(authUser);
+        } else {
+          // Fallback: try to get user from localStorage
+          const storedUser = localStorage.getItem('user');
+          if (storedUser) {
+            try {
+              setUser(JSON.parse(storedUser));
+            } catch (error) {
+              console.error('Failed to parse stored user:', error);
+              // If we can't get user data, redirect to login
+              navigate('/login', { replace: true });
+              return;
+            }
+          } else {
+            // No user data available - redirect to login
+            navigate('/login', { replace: true });
+            return;
+          }
+        }
+        
+      } catch (error) {
+        console.error("Auth check failed:", error);
+        
+        toast({
+          title: "Authentication Error",
+          description: "Please login again",
+          variant: "destructive",
+        });
+        
+        navigate('/login', { replace: true });
+      } finally {
+        setAuthLoading(false);
+      }
+    };
+
+    checkAuthAndLoadUser();
+  }, [navigate, toast]);
+
+  // Get user's first name for greeting
+  const getFirstName = () => {
+    if (!user) return "there";
+    
+    // Try to extract first name from full_name
+    if (user.full_name) {
+      const firstName = user.full_name.split(' ')[0];
+      return firstName;
+    }
+    
+    // Fallback to email prefix
+    if (user.email) {
+      return user.email.split('@')[0];
+    }
+    
+    return "there";
+  };
+
+  // Show loading state while checking authentication
+  if (authLoading) {
+    return (
+      <div className="space-y-4 md:space-y-6 animate-pulse">
+        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+          <div>
+            <div className="h-8 w-48 bg-muted rounded"></div>
+            <div className="h-4 w-64 bg-muted rounded mt-2"></div>
+          </div>
+          <div className="h-10 w-48 bg-muted rounded"></div>
+        </div>
+        
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 md:gap-6">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="h-32 bg-muted rounded-lg"></div>
+          ))}
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6">
+          <div className="h-64 bg-muted rounded-lg"></div>
+          <div className="h-64 bg-muted rounded-lg"></div>
+        </div>
+      </div>
+    );
+  }
+
+  // Don't render anything if user is not set (will redirect)
+  if (!user) {
+    return null;
+  }
 
   return (
     <div className="space-y-4 md:space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
         <div>
-          <h1 className="text-xl md:text-2xl font-bold mb-1.5">Hi, Kristin Watson 👋</h1>
-          <p className="text-sm text-muted-foreground">Manage your email workflow efficiently.</p>
+          <h1 className="text-xl md:text-2xl font-bold mb-1.5">
+            Hi, {getFirstName()} 👋
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            Manage your email workflow efficiently.
+          </p>
         </div>
         
         {/* Email Account Selector */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="w-full sm:w-auto sm:min-w-[240px] justify-between">
+            <Button variant="outline" className="w-full sm:w-auto sm:min-w-[240px] justify-between" disabled={dataLoading}>
               <div className="flex items-center gap-2">
-                <div className={`w-2 h-2 rounded-full ${currentAccount.color}`} />
+                <div className={`w-2 h-2 rounded-full ${currentAccount?.color}`} />
                 <div className="flex flex-col items-start">
-                  <span className="text-sm font-medium">{currentAccount.name}</span>
-                  {currentAccount.email && (
+                  <span className="text-sm font-medium">{currentAccount?.name}</span>
+                  {currentAccount?.email && (
                     <span className="text-xs text-muted-foreground">{currentAccount.email}</span>
                   )}
                 </div>
@@ -169,55 +296,6 @@ const DashboardHome = () => {
         ))}
       </div>
 
-      {/* Recent Activity */}
-      <Card className="shadow-card hover:shadow-card-hover transition-all border-border">
-        <CardHeader className="pb-3 pt-5 px-5">
-          <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
-            Recent Email Activity
-            <HelpCircle className="h-3.5 w-3.5" />
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="px-5 pb-5">
-          <div className="space-y-3">
-            {currentData.activity.map((activity, index) => (
-              <div
-                key={index}
-                className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
-              >
-                <div className="flex items-center gap-3 flex-1 min-w-0">
-                  <Avatar className="flex-shrink-0">
-                    <AvatarFallback className="bg-gradient-primary text-primary-foreground">
-                      {activity.avatar}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{activity.sender}</p>
-                    <p className="text-xs text-muted-foreground truncate">{activity.subject}</p>
-                  </div>
-                </div>
-                <div className="flex items-center flex-wrap gap-2 sm:gap-3">
-                  <Badge variant="secondary" className="text-xs">{activity.category}</Badge>
-                  <Badge
-                    className={`text-xs ${
-                      activity.status === "Draft Ready"
-                        ? "bg-info text-info-foreground"
-                        : activity.status === "To Respond"
-                        ? "bg-warning text-warning-foreground"
-                        : "bg-success text-success-foreground"
-                    }`}
-                  >
-                    {activity.status}
-                  </Badge>
-                  <span className="text-xs text-muted-foreground w-full sm:w-auto sm:min-w-[100px] text-left sm:text-right">
-                    {activity.date}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Category Breakdown & Quick Actions */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6">
         <Card className="shadow-card hover:shadow-card-hover transition-all border-border">
@@ -242,7 +320,7 @@ const DashboardHome = () => {
             </div>
           </CardContent>
         </Card>
-
+        
         <Card className="shadow-card hover:shadow-card-hover transition-all border-border">
           <CardHeader className="pb-3 pt-5 px-5">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">

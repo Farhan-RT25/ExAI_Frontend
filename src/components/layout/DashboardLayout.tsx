@@ -1,10 +1,13 @@
-import { Outlet, useLocation } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "./AppSidebar";
 import { Bell, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
+import { useToast } from "@/hooks/use-toast";
+import { getAuthStatusAndRedirect, type User } from "@/lib/api/auth";
 
 const getPageInfo = (pathname: string) => {
   const routes: Record<string, { title: string; subtitle: string }> = {
@@ -38,19 +41,127 @@ const getPageInfo = (pathname: string) => {
 
 export const DashboardLayout = () => {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const [user, setUser] = useState<User | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+  
   const pageInfo = getPageInfo(location.pathname);
+
+  // Get user initials for avatar
+  const getUserInitials = () => {
+    if (!user) return "U";
+    
+    if (user.full_name) {
+      const names = user.full_name.split(' ');
+      if (names.length >= 2) {
+        return `${names[0][0]}${names[1][0]}`.toUpperCase();
+      }
+      return names[0].substring(0, 2).toUpperCase();
+    }
+    
+    if (user.email) {
+      return user.email.substring(0, 2).toUpperCase();
+    }
+    
+    return "U";
+  };
+
+  useEffect(() => {
+    const checkAuthAndLoadUser = async () => {
+      try {
+        setAuthLoading(true);
+        
+        // Check authentication status and determine redirect
+        const { isAuthenticated, redirect, user: authUser } = await getAuthStatusAndRedirect();
+        
+        if (!isAuthenticated) {
+          // Not authenticated - redirect to login
+          navigate('/login', { replace: true });
+          return;
+        }
+        
+        if (redirect === 'onboarding') {
+          // User exists but needs onboarding - redirect to onboarding
+          toast({
+            title: "Setup Required",
+            description: "Please complete your account setup",
+            variant: "default",
+          });
+          navigate('/onboarding/email-connection', { replace: true });
+          return;
+        }
+        
+        // User is authenticated and has completed onboarding
+        if (authUser) {
+          setUser(authUser);
+        } else {
+          // Fallback: try to get user from localStorage
+          const storedUser = localStorage.getItem('user');
+          if (storedUser) {
+            try {
+              setUser(JSON.parse(storedUser));
+            } catch (error) {
+              console.error('Failed to parse stored user:', error);
+              // If we can't get user data, redirect to login
+              navigate('/login', { replace: true });
+              return;
+            }
+          } else {
+            // No user data available - redirect to login
+            navigate('/login', { replace: true });
+            return;
+          }
+        }
+        
+      } catch (error) {
+        console.error("Auth check failed:", error);
+        
+        toast({
+          title: "Authentication Error",
+          description: "Please login again",
+          variant: "destructive",
+        });
+        
+        navigate('/login', { replace: true });
+      } finally {
+        setAuthLoading(false);
+      }
+    };
+
+    checkAuthAndLoadUser();
+  }, [navigate, toast]);
+
+  // Show loading state while checking authentication
+  if (authLoading) {
+    return (
+      <SidebarProvider>
+        <div className="h-screen flex w-full bg-muted overflow-hidden">
+          <div className="w-64 bg-muted animate-pulse"></div>
+          <div className="flex-1 flex flex-col p-4 md:p-2 gap-4 md:gap-2 overflow-hidden">
+            <div className="h-16 bg-muted rounded animate-pulse"></div>
+            <div className="flex-1 bg-muted rounded animate-pulse"></div>
+          </div>
+        </div>
+      </SidebarProvider>
+    );
+  }
+
+  // Don't render anything if user is not set (will redirect)
+  if (!user) {
+    return null;
+  }
 
   return (
     <SidebarProvider>
-      <div className="min-h-screen flex w-full bg-muted">
+      <div className="h-screen flex w-full bg-muted overflow-hidden">
         <AppSidebar />
-        <div className="flex-1 flex flex-col p-4 md:p-2 gap-4 md:gap-2">
-          <header className="bg-card rounded-sm border border-border shadow-sm px-4 md:px-6 py-4 flex items-center justify-between">
+        <div className="flex-1 flex flex-col p-4 md:p-2 gap-4 md:gap-2 overflow-hidden">
+          <header className="bg-card rounded-sm border border-border shadow-sm px-4 md:px-6 py-4 flex items-center justify-between flex-shrink-0">
             <div className="flex items-center gap-3 md:gap-6 flex-1 min-w-0">
               <SidebarTrigger />
               <div className="min-w-0 flex-1">
                 <h2 className="text-base md:text-lg font-semibold text-foreground truncate">{pageInfo.title}</h2>
-                <p className="text-xs text-muted-foreground hidden sm:block truncate mt-0.5">{pageInfo.subtitle}</p>
               </div>
             </div>
             <div className="flex items-center gap-2 md:gap-3">
@@ -68,12 +179,12 @@ export const DashboardLayout = () => {
               </Button>
               <Avatar className="h-9 w-9">
                 <AvatarFallback className="bg-gradient-primary text-primary-foreground text-xs md:text-sm">
-                  KW
+                  {getUserInitials()}
                 </AvatarFallback>
               </Avatar>
             </div>
           </header>
-          <main className="flex-1 bg-card rounded-sm border border-border shadow-sm p-4 md:p-6 overflow-auto">
+          <main className="flex-1 bg-card rounded-sm border border-border shadow-sm p-4 md:p-6 overflow-y-auto min-h-0">
             <Outlet />
           </main>
         </div>

@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 
 export const Footer = () => {
   return (
-    <footer className="bg-[#1a1d2e] text-gray-300">
+    <footer className="bg-[#1a1d2e] text-gray-300 -mb-10">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-16">
         <div className="grid grid-cols-2 md:grid-cols-6 gap-8 mb-12">
           {/* Logo and description */}
@@ -79,18 +79,18 @@ export const Footer = () => {
               </li>
               <li className="text-sm">
                 <a href="tel:+11555123456" className="hover:text-white transition-colors">
-                  +1 (555) 123 4567
+                  +971 5 514 1234
                 </a>
               </li>
               <li className="text-sm text-gray-400">
-                123 Innovation Way, San Francisco, CA
+                Dubai, United Arab Emirates
               </li>
             </ul>
           </div>
         </div>
 
         {/* Bottom bar */}
-        <div className="border-t border-gray-800 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
+        <div className="border-t border-gray-800 pt-2 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-sm text-gray-400">
             © 2025 Ex AI. Designed by <span className="text-white">R A M A Technologies</span>
           </p>

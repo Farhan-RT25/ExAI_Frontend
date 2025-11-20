@@ -1,0 +1,1787 @@
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends, HTTPException, Request, BackgroundTasks
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
+from sqlalchemy.orm import selectinload
+from typing import Dict, List, Optional, Set
+from datetime import datetime
+import json
+import asyncio
+import httpx
+import os
+import base64
+import hashlib
+from email.mime.text import MIMEText
+from app.db.session import get_db, async_session_maker
+from app.db.models.email_account import EmailAccount
+from app.db.models.ai_onboarding_task import AIOnboardingTask
+from app.routers.auth_router import get_current_user
+from googleapiclient.discovery import build
+from google.oauth2.credentials import Credentials
+
+# Environment variables
+GMAIL_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
+GMAIL_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
+MICROSOFT_CLIENT_ID = os.getenv("MICROSOFT_CLIENT_ID")
+MICROSOFT_CLIENT_SECRET = os.getenv("MICROSOFT_CLIENT_SECRET")
+ZOHO_CLIENT_ID = os.getenv("ZOHO_CLIENT_ID")
+ZOHO_CLIENT_SECRET = os.getenv("ZOHO_CLIENT_SECRET")
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
+OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
+MODEL_NAME = os.getenv("MODEL_NAME")
+
+router = APIRouter(prefix="/realtime-email", tags=["Realtime Email Management"])
+
+# =====================================================
+# DEDUPLICATION CACHE
+# =====================================================
+# Track processed emails (in-memory cache per user)
+processed_emails_cache: Dict[int, Set[str]] = {}
+
+def get_email_fingerprint(email_id: str, account_email: str) -> str:
+    """Create unique fingerprint for email to prevent reprocessing"""
+    return hashlib.md5(f"{account_email}:{email_id}".encode()).hexdigest()
+
+# =====================================================
+# WEBSOCKET CONNECTION MANAGER
+# =====================================================
+class ConnectionManager:
+    def __init__(self):
+        self.active_connections: Dict[int, Set[WebSocket]] = {}
+    
+    async def connect(self, websocket: WebSocket, user_id: int):
+        await websocket.accept()
+        if user_id not in self.active_connections:
+            self.active_connections[user_id] = set()
+        self.active_connections[user_id].add(websocket)
+        print(f"✅ User {user_id} connected. Total connections: {len(self.active_connections[user_id])}")
+    
+    def disconnect(self, websocket: WebSocket, user_id: int):
+        if user_id in self.active_connections:
+            self.active_connections[user_id].discard(websocket)
+            if not self.active_connections[user_id]:
+                del self.active_connections[user_id]
+            print(f"❌ User {user_id} disconnected")
+    
+    async def send_personal_message(self, message: dict, user_id: int):
+        if user_id in self.active_connections:
+            disconnected = set()
+            for connection in self.active_connections[user_id]:
+                try:
+                    await connection.send_json(message)
+                    print(f"📤 Sent message to user {user_id}: {message.get('type')}")
+                except Exception as e:
+                    print(f"❌ Error sending to user {user_id}: {e}")
+                    disconnected.add(connection)
+            
+            # Clean up disconnected websockets
+            for conn in disconnected:
+                self.active_connections[user_id].discard(conn)
+
+manager = ConnectionManager()
+
+# Active polling tasks
+active_polling_tasks: Dict[int, asyncio.Task] = {}
+
+# =====================================================
+# WEBSOCKET ENDPOINT
+# =====================================================
+@router.websocket("/ws/{user_id}")
+async def websocket_endpoint(websocket: WebSocket, user_id: int):
+    """
+    WebSocket endpoint for real-time email notifications
+    Client receives updates when new emails arrive
+    """
+    await manager.connect(websocket, user_id)
+    
+    try:
+        # Send initial connection success message
+        await websocket.send_json({
+            "type": "connection",
+            "status": "connected",
+            "message": f"Connected to real-time email service",
+            "timestamp": datetime.utcnow().isoformat()
+        })
+        
+        # Keep connection alive and handle client messages
+        while True:
+            data = await websocket.receive_text()
+            message = json.loads(data)
+            
+            # Handle different message types from client
+            if message.get("type") == "ping":
+                await websocket.send_json({
+                    "type": "pong",
+                    "timestamp": datetime.utcnow().isoformat()
+                })
+            elif message.get("type") == "request_sync":
+                # Client requests immediate sync
+                await websocket.send_json({
+                    "type": "sync_started",
+                    "message": "Email sync initiated",
+                    "timestamp": datetime.utcnow().isoformat()
+                })
+                
+    except WebSocketDisconnect:
+        manager.disconnect(websocket, user_id)
+    except Exception as e:
+        print(f"WebSocket error for user {user_id}: {e}")
+        manager.disconnect(websocket, user_id)
+
+# =====================================================
+# POLLING MANAGEMENT
+# =====================================================
+@router.post("/start-polling/{user_id}")
+async def start_email_polling(user_id: int, background_tasks: BackgroundTasks):
+    """
+    Start polling for new emails for a user
+    This runs in the background and sends updates via WebSocket
+    """
+    # Check if already polling
+    if user_id in active_polling_tasks and not active_polling_tasks[user_id].done():
+        return {
+            "status": "already_active",
+            "message": "Email polling is already active for this user"
+        }
+    
+    # Start polling task
+    task = asyncio.create_task(poll_emails_for_user(user_id))
+    active_polling_tasks[user_id] = task
+    
+    return {
+        "status": "started",
+        "message": "Email polling started",
+        "user_id": user_id
+    }
+
+@router.post("/stop-polling/{user_id}")
+async def stop_email_polling(user_id: int):
+    """Stop polling for a user"""
+    if user_id in active_polling_tasks:
+        active_polling_tasks[user_id].cancel()
+        del active_polling_tasks[user_id]
+        return {
+            "status": "stopped",
+            "message": "Email polling stopped"
+        }
+    return {
+        "status": "not_active",
+        "message": "No active polling for this user"
+    }
+
+@router.get("/polling-status/{user_id}")
+async def get_polling_status(user_id: int):
+    """Check if polling is active for a user"""
+    is_active = user_id in active_polling_tasks and not active_polling_tasks[user_id].done()
+    return {
+        "user_id": user_id,
+        "polling_active": is_active,
+        "websocket_connected": user_id in manager.active_connections
+    }
+
+# =====================================================
+# ADAPTIVE POLLING LOGIC
+# =====================================================
+# async def poll_emails_for_user(user_id: int):
+#     """
+#     Poll email accounts for new messages with adaptive intervals
+#     """
+#     print(f"🚀 Starting email polling for user {user_id}")
+    
+#     consecutive_empty_polls = 0
+    
+#     while True:
+#         try:
+#             # Create a new database session for this iteration
+#             async with async_session_maker() as db:
+#                 # Get all email accounts for user (eagerly load platform)
+#                 result = await db.execute(
+#                     select(EmailAccount)
+#                     .options(selectinload(EmailAccount.platform))
+#                     .where(EmailAccount.user_id == user_id)
+#                 )
+#                 accounts = result.scalars().all()
+                
+#                 if not accounts:
+#                     print(f"⚠️ No email accounts found for user {user_id}")
+#                     await asyncio.sleep(60)
+#                     continue
+                
+#                 print(f"📧 Found {len(accounts)} email account(s) for user {user_id}")
+                
+#                 # Get user's categories
+#                 categories_result = await db.execute(
+#                     select(AIOnboardingTask).where(
+#                         AIOnboardingTask.user_id == user_id,
+#                         AIOnboardingTask.step_name == "create_smart_categories"
+#                     )
+#                 )
+#                 category_task = categories_result.scalar_one_or_none()
+                
+#                 if not category_task or not category_task.result_data:
+#                     print(f"⚠️ No categories found for user {user_id}")
+#                     await asyncio.sleep(60)
+#                     continue
+                
+#                 selected_categories = category_task.result_data.get("selected_categories", [])
+#                 print(f"📋 User has {len(selected_categories)} categories: {selected_categories}")
+                
+#                 found_any_new = False
+                
+#                 # Check each account for new emails
+#                 for account in accounts:
+#                     try:
+#                         platform_name = account.platform.platform_name.lower() if account.platform else ""
+#                         print(f"🔍 Checking {platform_name} account: {account.account_email}")
+                        
+#                         new_emails = []
+#                         if "google" in platform_name or "gmail" in platform_name:
+#                             async with async_session_maker() as check_db:
+#                                 new_emails = await check_new_gmail_messages(account, check_db)
+#                         elif "microsoft" in platform_name or "outlook" in platform_name:
+#                             async with async_session_maker() as check_db:
+#                                 new_emails = await check_new_outlook_messages(account, check_db)
+#                         elif "zoho" in platform_name:
+#                             async with async_session_maker() as check_db:
+#                                 new_emails = await check_new_zoho_messages(account, check_db)
+                        
+#                         if new_emails:
+#                             found_any_new = True
+#                             print(f"✉️ Found {len(new_emails)} new email(s) in {account.account_email}")
+#                             # Process emails WITHOUT database storage
+#                             await process_new_emails(
+#                                 new_emails,
+#                                 account,
+#                                 selected_categories,
+#                                 user_id
+#                             )
+#                         else:
+#                             print(f"📭 No new emails in {account.account_email}")
+                    
+#                     except Exception as e:
+#                         print(f"❌ Error checking account {account.account_email}: {e}")
+#                         import traceback
+#                         traceback.print_exc()
+#                         continue
+            
+#             # Adaptive polling: faster when finding emails, slower when idle
+#             if found_any_new:
+#                 consecutive_empty_polls = 0
+#                 wait_time = 30  # 30 seconds when active
+#             else:
+#                 consecutive_empty_polls += 1
+#                 # Gradually increase to 2 minutes max when no new emails
+#                 wait_time = min(30 + (consecutive_empty_polls * 15), 120)
+            
+#             print(f"⏳ Waiting {wait_time}s before next poll (empty polls: {consecutive_empty_polls})")
+#             await asyncio.sleep(wait_time)
+            
+#         except asyncio.CancelledError:
+#             print(f"🛑 Polling cancelled for user {user_id}")
+#             break
+#         except Exception as e:
+#             print(f"❌ Error in polling loop for user {user_id}: {e}")
+#             import traceback
+#             traceback.print_exc()
+#             await asyncio.sleep(60)
+async def poll_emails_for_user(user_id: int):
+    """
+    Poll email accounts for new messages with adaptive intervals
+    """
+    print(f"🚀 Starting email polling for user {user_id}")
+    
+    consecutive_empty_polls = 0
+    
+    while True:
+        try:
+            async with async_session_maker() as db:
+                # Get all email accounts
+                result = await db.execute(
+                    select(EmailAccount)
+                    .options(selectinload(EmailAccount.platform))
+                    .where(EmailAccount.user_id == user_id)
+                )
+                accounts = result.scalars().all()
+                
+                if not accounts:
+                    print(f"⚠️ No email accounts found for user {user_id}")
+                    await asyncio.sleep(60)
+                    continue
+                
+                # Get user's categories AND consent
+                categories_result = await db.execute(
+                    select(AIOnboardingTask).where(
+                        AIOnboardingTask.user_id == user_id,
+                        AIOnboardingTask.step_name == "create_smart_categories"
+                    )
+                )
+                category_task = categories_result.scalar_one_or_none()
+                
+                if not category_task or not category_task.result_data:
+                    print(f"⚠️ No categories found for user {user_id}")
+                    await asyncio.sleep(60)
+                    continue
+                
+                selected_categories = category_task.result_data.get("selected_categories", [])
+                is_categories_agree = category_task.result_data.get("is_categories_agree", False)
+                
+                print(f"📋 User has {len(selected_categories)} categories")
+                print(f"🔐 Category consent: {'YES - Apply to email platform' if is_categories_agree else 'NO - Only EX AI frontend'}")
+                
+                found_any_new = False
+                
+                # Check each account
+                for account in accounts:
+                    try:
+                        platform_name = account.platform.platform_name.lower() if account.platform else ""
+                        print(f"🔍 Checking {platform_name} account: {account.account_email}")
+                        
+                        new_emails = []
+                        if "google" in platform_name or "gmail" in platform_name:
+                            async with async_session_maker() as check_db:
+                                new_emails = await check_new_gmail_messages(account, check_db)
+                        elif "microsoft" in platform_name or "outlook" in platform_name:
+                            async with async_session_maker() as check_db:
+                                new_emails = await check_new_outlook_messages(account, check_db)
+                        elif "zoho" in platform_name:
+                            async with async_session_maker() as check_db:
+                                new_emails = await check_new_zoho_messages(account, check_db)
+                        
+                        if new_emails:
+                            found_any_new = True
+                            print(f"✉️ Found {len(new_emails)} new email(s)")
+                            # Process with consent parameter
+                            await process_new_emails(
+                                new_emails,
+                                account,
+                                selected_categories,
+                                user_id,
+                                is_categories_agree  # NEW: Pass consent
+                            )
+                        else:
+                            print(f"📭 No new emails")
+                    
+                    except Exception as e:
+                        print(f"❌ Error checking account: {e}")
+                        continue
+            
+            # Adaptive polling
+            if found_any_new:
+                consecutive_empty_polls = 0
+                wait_time = 30
+            else:
+                consecutive_empty_polls += 1
+                wait_time = min(30 + (consecutive_empty_polls * 15), 120)
+            
+            print(f"⏳ Waiting {wait_time}s before next poll")
+            await asyncio.sleep(wait_time)
+            
+        except asyncio.CancelledError:
+            print(f"🛑 Polling cancelled for user {user_id}")
+            break
+        except Exception as e:
+            print(f"❌ Error in polling loop: {e}")
+            await asyncio.sleep(60)
+
+# =====================================================
+# EMAIL CHECKING FUNCTIONS WITH DEDUPLICATION
+# =====================================================
+async def check_new_gmail_messages(account: EmailAccount, db: AsyncSession) -> List[dict]:
+    """Check for new Gmail messages - ONLY UNREAD from last 5 minutes"""
+    try:
+        print(f"🔐 Creating Gmail credentials for {account.account_email}")
+        creds = Credentials(
+            token=account.access_token,
+            refresh_token=account.refresh_token,
+            token_uri="https://oauth2.googleapis.com/token",
+            client_id=GMAIL_CLIENT_ID,
+            client_secret=GMAIL_CLIENT_SECRET
+        )
+        
+        from fastapi.concurrency import run_in_threadpool
+        
+        # Build service in thread pool
+        service = await run_in_threadpool(
+            lambda: build("gmail", "v1", credentials=creds)
+        )
+        
+        # CRITICAL: Only get UNREAD messages from last 5 minutes
+        query = "is:unread newer_than:5m"
+        
+        print(f"🔎 Searching Gmail with query: {query}")
+        
+        # Execute list in thread pool
+        results = await run_in_threadpool(
+            lambda: service.users().messages().list(
+                userId="me",
+                q=query,
+                maxResults=5  # Limit to 5 most recent
+            ).execute()
+        )
+        
+        messages = results.get("messages", [])
+        print(f"📬 Gmail returned {len(messages)} unread message(s) from last 5 minutes")
+        
+        new_emails = []
+        
+        # Get or create cache for this user
+        if account.user_id not in processed_emails_cache:
+            processed_emails_cache[account.user_id] = set()
+        
+        for msg in messages:
+            # Check if already processed
+            fingerprint = get_email_fingerprint(msg["id"], account.account_email)
+            if fingerprint in processed_emails_cache[account.user_id]:
+                print(f"⏭️ Skipping already processed email: {msg['id']}")
+                continue
+            
+            # Execute get in thread pool
+            email_data = await run_in_threadpool(
+                lambda m=msg: service.users().messages().get(
+                    userId="me",
+                    id=m["id"],
+                    format="full"
+                ).execute()
+            )
+            
+            new_emails.append({
+                "id": email_data["id"],
+                "data": email_data,
+                "platform": "gmail",
+                "fingerprint": fingerprint
+            })
+        
+        # Update last synced time
+        account.last_synced_at = datetime.utcnow()
+        await db.commit()
+        
+        return new_emails
+        
+    except Exception as e:
+        print(f"❌ Error checking Gmail: {e}")
+        import traceback
+        traceback.print_exc()
+        return []
+
+async def check_new_outlook_messages(account: EmailAccount, db: AsyncSession) -> List[dict]:
+    """Check for new Outlook messages with deduplication"""
+    try:
+        headers = {"Authorization": f"Bearer {account.access_token}"}
+        
+        params = {
+            "$top": 5,
+            "$orderby": "receivedDateTime desc",
+            "$filter": "isRead eq false",
+            "$select": "id,subject,from,receivedDateTime,bodyPreview,internetMessageId,conversationId"
+        }
+        
+        # Only get emails from last 5 minutes
+        from datetime import timedelta
+        five_min_ago = (datetime.utcnow() - timedelta(minutes=5)).isoformat()
+        params["$filter"] += f" and receivedDateTime gt {five_min_ago}"
+        
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.get(
+                "https://graph.microsoft.com/v1.0/me/mailFolders/inbox/messages",
+                headers=headers,
+                params=params
+            )
+        
+        new_emails = []
+        
+        # Get or create cache for this user
+        if account.user_id not in processed_emails_cache:
+            processed_emails_cache[account.user_id] = set()
+        
+        if response.status_code == 200:
+            data = response.json().get("value", [])
+            for msg in data:
+                # Check if already processed
+                fingerprint = get_email_fingerprint(msg["id"], account.account_email)
+                if fingerprint in processed_emails_cache[account.user_id]:
+                    print(f"⏭️ Skipping already processed email: {msg['id']}")
+                    continue
+                
+                new_emails.append({
+                    "id": msg["id"],
+                    "data": msg,
+                    "platform": "outlook",
+                    "fingerprint": fingerprint
+                })
+        
+        account.last_synced_at = datetime.utcnow()
+        await db.commit()
+        
+        return new_emails
+        
+    except Exception as e:
+        print(f"Error checking Outlook: {e}")
+        return []
+
+async def check_new_zoho_messages(account: EmailAccount, db: AsyncSession) -> List[dict]:
+    """Check for new Zoho messages with deduplication"""
+    try:
+        headers = {"Authorization": f"Zoho-oauthtoken {account.access_token}"}
+        
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            acc_response = await client.get(
+                "https://mail.zoho.com/api/accounts",
+                headers=headers
+            )
+        
+        if acc_response.status_code != 200:
+            return []
+        
+        accounts = acc_response.json().get("data", [])
+        if not accounts:
+            return []
+        
+        account_id = accounts[0]["accountId"]
+        
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            folder_response = await client.get(
+                f"https://mail.zoho.com/api/accounts/{account_id}/folders",
+                headers=headers
+            )
+        
+        inbox_id = None
+        if folder_response.status_code == 200:
+            folders = folder_response.json().get("data", [])
+            for folder in folders:
+                if folder.get("folderName", "").lower() == "inbox":
+                    inbox_id = str(folder["folderId"])
+                    break
+        
+        if not inbox_id:
+            return []
+        
+        params = {
+            "folderId": inbox_id,
+            "limit": 5,
+            "start": 1
+        }
+        
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            msg_response = await client.get(
+                f"https://mail.zoho.com/api/accounts/{account_id}/messages/view",
+                headers=headers,
+                params=params
+            )
+        
+        new_emails = []
+        
+        # Get or create cache for this user
+        if account.user_id not in processed_emails_cache:
+            processed_emails_cache[account.user_id] = set()
+        
+        if msg_response.status_code == 200:
+            messages = msg_response.json().get("data", [])
+            for msg in messages:
+                msg_id = str(msg.get("messageId"))
+                # Check if already processed
+                fingerprint = get_email_fingerprint(msg_id, account.account_email)
+                if fingerprint in processed_emails_cache[account.user_id]:
+                    print(f"⏭️ Skipping already processed email: {msg_id}")
+                    continue
+                
+                new_emails.append({
+                    "id": msg_id,
+                    "data": msg,
+                    "platform": "zoho",
+                    "fingerprint": fingerprint
+                })
+        
+        account.last_synced_at = datetime.utcnow()
+        await db.commit()
+        
+        return new_emails
+        
+    except Exception as e:
+        print(f"Error checking Zoho: {e}")
+        return []
+
+# =====================================================
+# EMAIL PROCESSING WITH DEDUPLICATION
+# =====================================================
+# async def process_new_emails(
+#     new_emails: List[dict],
+#     account: EmailAccount,
+#     selected_categories: List[str],
+#     user_id: int
+# ):
+#     """
+#     Process new emails: categorize, label, create drafts, notify via WebSocket
+#     NO DATABASE STORAGE - All processing is in-memory only
+#     """
+    
+#     print(f"⚙️ Processing {len(new_emails)} new emails for user {user_id} (NO DB STORAGE)")
+    
+#     category_names = {
+#         "to-respond": "To Respond",
+#         "waiting-reply": "Waiting Reply",
+#         "notifications": "Notifications",
+#         "marketing": "Marketing",
+#         "sales": "Sales",
+#         "admin": "Admin",
+#         "hr": "HR",
+#         "meeting-event": "Meeting/Event",
+#         "projects": "Projects",
+#         "personal": "Personal"
+#     }
+    
+#     user_categories = [
+#         {"id": cat_id, "name": category_names.get(cat_id, cat_id)}
+#         for cat_id in selected_categories
+#     ]
+    
+#     # Get or create cache for this user
+#     if user_id not in processed_emails_cache:
+#         processed_emails_cache[user_id] = set()
+    
+#     for email_info in new_emails:
+#         try:
+#             fingerprint = email_info.get("fingerprint")
+            
+#             # Skip if already processed
+#             if fingerprint and fingerprint in processed_emails_cache[user_id]:
+#                 print(f"⏭️ Skipping duplicate email")
+#                 continue
+            
+#             platform = email_info["platform"]
+#             email_data = email_info["data"]
+#             email_id = email_info["id"]
+            
+#             # Parse email based on platform
+#             if platform == "gmail":
+#                 parsed_email = parse_gmail_email(email_data)
+#             elif platform == "outlook":
+#                 parsed_email = parse_outlook_email(email_data)
+#             elif platform == "zoho":
+#                 parsed_email = parse_zoho_email(email_data)
+#             else:
+#                 continue
+            
+#             print(f"📝 Processing: {parsed_email['subject'][:50]}...")
+            
+#             # Categorize using improved AI
+#             category_id = await categorize_single_email(parsed_email, user_categories)
+#             print(f"🏷️ Category: {category_id} ({category_names.get(category_id)})")
+            
+#             # Apply label/folder
+#             label_applied = await apply_email_label(
+#                 account,
+#                 email_id,
+#                 category_id,
+#                 category_names.get(category_id, category_id),
+#                 platform
+#             )
+            
+#             if label_applied:
+#                 print(f"✅ Label '{category_names.get(category_id)}' applied successfully")
+#             else:
+#                 print(f"⚠️ Failed to apply label")
+            
+#             # Generate draft ONLY for "to-respond" category
+#             draft_created = False
+#             draft_content = None
+            
+#             if category_id == "to-respond":
+#                 print(f"✏️ Generating draft reply...")
+#                 draft_content = await generate_draft_reply_ai(parsed_email)
+                
+#                 if draft_content:
+#                     draft_created = await create_draft_reply(
+#                         account,
+#                         email_id,
+#                         parsed_email,
+#                         draft_content,
+#                         platform
+#                     )
+#                     if draft_created:
+#                         print(f"✅ Draft created successfully")
+#                     else:
+#                         print(f"⚠️ Failed to create draft")
+            
+#             # Mark as processed
+#             if fingerprint:
+#                 processed_emails_cache[user_id].add(fingerprint)
+                
+#                 # Limit cache size to last 1000 emails per user
+#                 if len(processed_emails_cache[user_id]) > 1000:
+#                     # Remove oldest entries
+#                     processed_emails_cache[user_id] = set(
+#                         list(processed_emails_cache[user_id])[-1000:]
+#                     )
+            
+#             # Send WebSocket notification
+#             notification = {
+#                 "type": "new_email",
+#                 "data": {
+#                     "email_id": email_id,
+#                     "subject": parsed_email["subject"],
+#                     "from": parsed_email["from_name"],
+#                     "from_email": parsed_email["from_email"],
+#                     "body_preview": parsed_email["body"][:200],
+#                     "category": category_id,
+#                     "category_name": category_names.get(category_id, category_id),
+#                     "label_applied": label_applied,
+#                     "draft_created": draft_created,
+#                     "draft_preview": draft_content[:150] if draft_content else None,
+#                     "received_at": datetime.utcnow().isoformat(),
+#                     "account_email": account.account_email,
+#                     "platform": platform,
+#                     "thread_id": parsed_email.get("thread_id"),
+#                     "snippet": parsed_email.get("snippet", "")
+#                 }
+#             }
+            
+#             await manager.send_personal_message(notification, user_id)
+#             print(f"📢 WebSocket notification sent to user {user_id}")
+#             print(f"✅ Processed email {email_id} successfully (no DB storage)\n")
+            
+#         except Exception as e:
+#             print(f"❌ Error processing email: {e}")
+#             import traceback
+#             traceback.print_exc()
+#             continue
+
+async def process_new_emails(
+    new_emails: List[dict],
+    account: EmailAccount,
+    selected_categories: List[str],
+    user_id: int,
+    is_categories_agree: bool = False  # NEW: Consent parameter
+):
+    """
+    Process new emails: categorize, label (if consented), create drafts, notify via WebSocket
+    """
+    
+    print(f"⚙️ Processing {len(new_emails)} new emails for user {user_id}")
+    print(f"🔐 Will {'APPLY' if is_categories_agree else 'NOT APPLY'} labels to email platform")
+    
+    category_names = {
+        "to-respond": "To Respond",
+        "waiting-reply": "Waiting Reply",
+        "notifications": "Notifications",
+        "marketing": "Marketing",
+        "sales": "Sales",
+        "admin": "Admin",
+        "hr": "HR",
+        "meeting-event": "Meeting/Event",
+        "projects": "Projects",
+        "personal": "Personal"
+    }
+    
+    user_categories = [
+        {"id": cat_id, "name": category_names.get(cat_id, cat_id)}
+        for cat_id in selected_categories
+    ]
+    
+    # Get or create cache
+    if user_id not in processed_emails_cache:
+        processed_emails_cache[user_id] = set()
+    
+    for email_info in new_emails:
+        try:
+            fingerprint = email_info.get("fingerprint")
+            
+            # Skip duplicates
+            if fingerprint and fingerprint in processed_emails_cache[user_id]:
+                print(f"⏭️ Skipping duplicate email")
+                continue
+            
+            platform = email_info["platform"]
+            email_data = email_info["data"]
+            email_id = email_info["id"]
+            
+            # Parse email
+            if platform == "gmail":
+                parsed_email = parse_gmail_email(email_data)
+            elif platform == "outlook":
+                parsed_email = parse_outlook_email(email_data)
+            elif platform == "zoho":
+                parsed_email = parse_zoho_email(email_data)
+            else:
+                continue
+            
+            print(f"📝 Processing: {parsed_email['subject'][:50]}...")
+            
+            # Categorize (ALWAYS do this for EX AI)
+            category_id = await categorize_single_email(parsed_email, user_categories)
+            print(f"🏷️ Category: {category_id} ({category_names.get(category_id)})")
+            
+            # Apply label ONLY if user consented
+            label_applied = False
+            if is_categories_agree:
+                label_applied = await apply_email_label(
+                    account,
+                    email_id,
+                    category_id,
+                    category_names.get(category_id, category_id),
+                    platform
+                )
+                if label_applied:
+                    print(f"✅ Label '{category_names.get(category_id)}' applied to email platform")
+                else:
+                    print(f"⚠️ Failed to apply label")
+            else:
+                print(f"⏭️ Skipping label application (user did not consent)")
+            
+            # Generate draft ONLY for "to-respond" (ALWAYS do this)
+            draft_created = False
+            draft_content = None
+            
+            if category_id == "to-respond":
+                print(f"✏️ Generating draft reply...")
+                draft_content = await generate_draft_reply_ai(parsed_email)
+                
+                if draft_content:
+                    draft_created = await create_draft_reply(
+                        account,
+                        email_id,
+                        parsed_email,
+                        draft_content,
+                        platform
+                    )
+                    if draft_created:
+                        print(f"✅ Draft created successfully")
+            
+            # Mark as processed
+            if fingerprint:
+                processed_emails_cache[user_id].add(fingerprint)
+                if len(processed_emails_cache[user_id]) > 1000:
+                    processed_emails_cache[user_id] = set(
+                        list(processed_emails_cache[user_id])[-1000:]
+                    )
+            
+            # Send WebSocket notification
+            notification = {
+                "type": "new_email",
+                "data": {
+                    "email_id": email_id,
+                    "subject": parsed_email["subject"],
+                    "from": parsed_email["from_name"],
+                    "from_email": parsed_email["from_email"],
+                    "body_preview": parsed_email["body"][:200],
+                    "category": category_id,
+                    "category_name": category_names.get(category_id, category_id),
+                    "label_applied": label_applied,
+                    "label_applied_to_platform": is_categories_agree,  # NEW: Indicate consent status
+                    "draft_created": draft_created,
+                    "draft_preview": draft_content[:150] if draft_content else None,
+                    "received_at": datetime.utcnow().isoformat(),
+                    "account_email": account.account_email,
+                    "platform": platform,
+                    "thread_id": parsed_email.get("thread_id"),
+                    "snippet": parsed_email.get("snippet", ""),
+                    "note": (
+                        "Categorized and labeled in email platform" 
+                        if is_categories_agree and label_applied 
+                        else "Categorized for EX AI only (not applied to email platform)"
+                    )
+                }
+            }
+            
+            await manager.send_personal_message(notification, user_id)
+            print(f"📢 WebSocket notification sent to user {user_id}")
+            print(f"✅ Processed email {email_id} successfully\n")
+            
+        except Exception as e:
+            print(f"❌ Error processing email: {e}")
+            import traceback
+            traceback.print_exc()
+            continue
+
+
+# =====================================================
+# EMAIL PARSING FUNCTIONS
+# =====================================================
+def parse_gmail_email(email_data: dict) -> dict:
+    """Parse Gmail email data"""
+    headers = email_data.get("payload", {}).get("headers", [])
+    subject = next((h["value"] for h in headers if h["name"] == "Subject"), "No Subject")
+    from_header = next((h["value"] for h in headers if h["name"] == "From"), "")
+    message_id = next((h["value"] for h in headers if h["name"] == "Message-ID"), "")
+    
+    from_name = from_header.split("<")[0].strip() if "<" in from_header else from_header
+    from_email = from_header.split("<")[1].split(">")[0] if "<" in from_header else from_header
+    
+    # Get body
+    body = ""
+    payload = email_data.get("payload", {})
+    if "parts" in payload:
+        for part in payload["parts"]:
+            if part["mimeType"] == "text/plain":
+                data = part.get("body", {}).get("data", "")
+                if data:
+                    body = base64.urlsafe_b64decode(data).decode("utf-8", errors="ignore")
+                    break
+    else:
+        data = payload.get("body", {}).get("data", "")
+        if data:
+            body = base64.urlsafe_b64decode(data).decode("utf-8", errors="ignore")
+    
+    return {
+        "id": email_data["id"],
+        "subject": subject,
+        "from_name": from_name,
+        "from_email": from_email,
+        "body": body[:500],
+        "snippet": email_data.get("snippet", ""),
+        "thread_id": email_data.get("threadId"),
+        "message_id_header": message_id
+    }
+
+def parse_outlook_email(email_data: dict) -> dict:
+    """Parse Outlook email data"""
+    from_info = email_data.get("from", {}).get("emailAddress", {})
+    return {
+        "id": email_data["id"],
+        "subject": email_data.get("subject", "No Subject"),
+        "from_name": from_info.get("name", ""),
+        "from_email": from_info.get("address", ""),
+        "body": email_data.get("bodyPreview", "")[:500],
+        "snippet": email_data.get("bodyPreview", ""),
+        "thread_id": email_data.get("conversationId"),
+        "message_id_header": email_data.get("internetMessageId", "")
+    }
+
+def parse_zoho_email(email_data: dict) -> dict:
+    """Parse Zoho email data"""
+    from_address = email_data.get("fromAddress", "")
+    from_email = from_address
+    from_name = email_data.get("sender", "")
+    
+    if "<" in from_address and ">" in from_address:
+        parts = from_address.split("<")
+        from_name = parts[0].strip().strip('"')
+        from_email = parts[1].strip(">").strip()
+    
+    return {
+        "id": str(email_data.get("messageId")),
+        "subject": email_data.get("subject", "No Subject"),
+        "from_name": from_name,
+        "from_email": from_email,
+        "body": email_data.get("summary", "")[:500],
+        "snippet": email_data.get("summary", ""),
+        "thread_id": str(email_data.get("threadId", email_data.get("messageId"))),
+        "message_id_header": str(email_data.get("messageId"))
+    }
+
+# =====================================================
+# AI CATEGORIZATION - OPTIMIZED FOR GEMMA-3
+# =====================================================
+async def categorize_single_email(email: dict, categories: List[dict]) -> str:
+    """Categorize email using Gemma-3 optimized prompt"""
+    
+    category_list = "\n".join([f"{cat['id']}" for cat in categories])
+    
+    # Enhanced categorization prompt optimized for Gemma-3 with improved accuracy
+    prompt = f"""Categorize this email into the SINGLE most appropriate category.
+
+AVAILABLE CATEGORIES: {category_list}
+
+EMAIL ANALYSIS:
+From: {email['from_email']}
+Subject: {email['subject']}
+Content: {email['body'][:500]}
+Snippet: {email.get('snippet', '')[:100]}
+
+CLASSIFICATION RULES:
+1. "to-respond" → ONLY when email explicitly requires YOUR personalized reply or action
+2. "waiting-reply" → Sent emails where YOU are waiting for their response
+3. "meeting-event" → Calendar invites, meeting requests, event notifications, scheduling
+4. "marketing" → Promotional content, newsletters, advertisements, sales offers, unsubscribe links
+5. "sales" → Client inquiries, business proposals, partnership discussions, B2B outreach
+6. "notifications" → Automated alerts, receipts, confirmations, system messages, no-reply emails
+7. "admin" → Internal operations, company policies, administrative tasks, paperwork
+8. "hr" → Human resources, recruitment, employee communications, benefits, personnel
+9. "projects" → Project updates, task assignments, collaboration, deliverables, team work
+10. "personal" → Friends, family, social communications, non-professional emails
+
+SMART DETECTION PATTERNS:
+- Senders: "noreply@", "no-reply@", "notifications@", "alerts@" → "notifications"
+- Keywords: "meeting", "invite", "calendar", "zoom", "teams", "webinar" → "meeting-event"
+- Intent: "?", "please", "can you", "let me know", "need your input" → "to-respond"
+- Content: "unsubscribe", "newsletter", "promotion", "offer", "special" → "marketing"
+- Business: "proposal", "demo", "partnership", "collaboration" → "sales"
+- Urgency: "urgent", "asap", "deadline", "immediately" → "to-respond" (if action needed)
+
+ANALYSIS STEPS:
+1. Check sender for automation patterns
+2. Scan for calendar/meeting keywords
+3. Identify if personalized response required
+4. Match content to most specific category
+5. Use "notifications" as fallback for unclear cases
+
+Return ONLY the category id (lowercase, no spaces, no quotes, no explanation)."""
+
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(
+                OPENROUTER_URL,
+                headers={
+                    "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+                    "Content-Type": "application/json"
+                },
+                json={
+                    "model": MODEL_NAME,
+                    "messages": [
+                        {
+                            "role": "user",
+                            "content": prompt
+                        }
+                    ],
+                    "temperature": 0.3,
+                    "max_tokens": 30,
+                    "top_p": 0.9
+                }
+            )
+        
+        if response.status_code == 200:
+            ai_output = response.json()
+            category_id = ai_output.get("choices", [{}])[0].get("message", {}).get("content", "").strip()
+            
+            # Clean response
+            category_id = category_id.lower().strip('"\'` \n\r\t.,;:')
+            
+            # Extract just the category id if AI added explanation
+            for cat in categories:
+                if cat['id'] in category_id:
+                    print(f"✅ AI categorized as: {cat['id']}")
+                    return cat['id']
+            
+            print(f"⚠️ AI returned unclear category: '{category_id}', using smart fallback")
+        
+        return apply_smart_fallback_categorization(email, categories)
+        
+    except Exception as e:
+        print(f"❌ Error categorizing email: {e}")
+        return apply_smart_fallback_categorization(email, categories)
+
+def apply_smart_fallback_categorization(email: dict, categories: List[dict]) -> str:
+    """Smart rule-based categorization with priority"""
+    from_email = email.get('from_email', '').lower()
+    subject = email.get('subject', '').lower()
+    body = email.get('body', '').lower()
+    
+    # Available category IDs
+    available = [cat['id'] for cat in categories]
+    
+    # Priority 1: Automated emails (highest confidence)
+    automated = ['noreply', 'no-reply', 'donotreply', 'notifications@', 'automated@']
+    if any(kw in from_email for kw in automated) and 'notifications' in available:
+        return "notifications"
+    
+    # Priority 2: Calendar/Meeting (high confidence)
+    meeting_kw = ['calendar invite', 'meeting invite', 'google meet', 'zoom meeting', 'teams meeting', 'webinar', '.ics']
+    if any(kw in subject or kw in body[:200] for kw in meeting_kw) and 'meeting-event' in available:
+        return "meeting-event"
+    
+    # Priority 3: Marketing (high confidence)
+    if 'unsubscribe' in body[:500] and 'marketing' in available:
+        return "marketing"
+    
+    # Priority 4: Needs response (medium confidence)
+    response_indicators = ['?', 'please reply', 'let me know', 'what do you think', 'need your input', 'can you', 'could you']
+    has_question = any(ind in subject or ind in body[:300] for ind in response_indicators)
+    
+    if has_question and not any(kw in from_email for kw in automated):
+        if 'to-respond' in available:
+            return "to-respond"
+    
+    # Priority 5: Sales (medium confidence)
+    sales_kw = ['demo', 'trial', 'partnership opportunity', 'reaching out to discuss']
+    if any(kw in body[:300] for kw in sales_kw) and 'sales' in available:
+        return "sales"
+    
+    # Default: notifications for everything else
+    if 'notifications' in available:
+        return "notifications"
+    
+    # Absolute fallback
+    return available[0] if available else "notifications"
+
+# =====================================================
+# DRAFT GENERATION - OPTIMIZED FOR GEMMA-3
+# =====================================================
+async def generate_draft_reply_ai(email: dict) -> Optional[str]:
+    """Generate properly formatted draft reply using AI - optimized for Gemma-3"""
+    
+    print(f"🤖 Starting AI draft generation...")
+    print(f"   Subject: {email.get('subject', 'N/A')[:50]}")
+    print(f"   From: {email.get('from_email', 'N/A')}")
+    
+    # Optimized prompt for consistent professional draft replies
+    prompt = f"""Generate a professional email reply based on this context.
+
+ORIGINAL EMAIL:
+From: {email['from_name']} <{email['from_email']}>
+Subject: {email['subject']}
+Content: {email['body'][:700]}
+
+RESPONSE REQUIREMENTS:
+1. If this is merely FYI, notification, or status update with no questions/requests → respond "NO_REPLY_NEEDED"
+2. If the email requires action or has questions → provide a concise, professional reply
+3. Structure your response as:
+   - Personalized greeting (e.g., "Hi [First Name]," or "Dear [Name],")
+   - Direct acknowledgment of their message
+   - Clear answers to any questions asked
+   - Specific next steps or information requested
+   - Professional closing (e.g., "Best regards," or "Thank you,")
+
+FORMATTING GUIDELINES:
+- Use proper business email tone
+- Keep response focused and actionable (80-120 words maximum)
+- Address the sender by first name when appropriate
+- Include specific details from their email in your response
+- Suggest concrete follow-up actions when relevant
+- Return only the email body text - no subject, headers, or signature
+
+Generate the reply now:"""
+
+    try:
+        print(f"📤 Sending request to AI API...")
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(
+                OPENROUTER_URL,
+                headers={
+                    "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+                    "Content-Type": "application/json"
+                },
+                json={
+                    "model": MODEL_NAME,
+                    "messages": [
+                        {
+                            "role": "user",
+                            "content": prompt
+                        }
+                    ],
+                    "temperature": 0.7,
+                    "max_tokens": 400,  # Increased for better formatting
+                    "top_p": 0.9
+                }
+            )
+        
+        print(f"📥 AI API response status: {response.status_code}")
+        
+        if response.status_code == 200:
+            ai_output = response.json()
+            draft_text = ai_output.get("choices", [{}])[0].get("message", {}).get("content", "").strip()
+            
+            print(f"🤖 AI generated {len(draft_text)} characters")
+            
+            # Check if reply is needed
+            if "NO_REPLY_NEEDED" in draft_text.upper():
+                print("🚫 AI determined no reply needed")
+                return None
+            
+            # Clean and format the draft
+            draft_text = clean_and_format_draft(draft_text, email)
+            
+            print(f"✅ Generated formatted draft (first 100 chars):")
+            print(f"   {draft_text[:100]}...")
+            return draft_text
+        else:
+            print(f"⚠️ AI API returned status {response.status_code}")
+            print(f"   Response: {response.text[:200]}")
+            return None
+        
+    except Exception as e:
+        print(f"❌ Error generating draft: {e}")
+        import traceback
+        traceback.print_exc()
+        return None
+    
+def clean_and_format_draft(draft_text: str, email: dict) -> str:
+    """Clean and format the draft reply for better presentation"""
+    
+    # Remove any accidental subject lines or headers
+    lines = draft_text.split('\n')
+    cleaned_lines = []
+    
+    skip_patterns = [
+        'subject:',
+        'from:',
+        'to:',
+        're:',
+        'dear sir/madam',  # Remove overly formal openings
+    ]
+    
+    for line in lines:
+        line_lower = line.lower().strip()
+        # Skip lines that look like email headers
+        if any(pattern in line_lower for pattern in skip_patterns):
+            continue
+        cleaned_lines.append(line)
+    
+    draft_text = '\n'.join(cleaned_lines).strip()
+    
+    # Ensure proper greeting if missing
+    first_line = draft_text.split('\n')[0].strip()
+    if not any(greeting in first_line.lower() for greeting in ['hi', 'hello', 'dear', 'hey']):
+        # Extract first name from sender
+        first_name = email['from_name'].split()[0] if email['from_name'] else 'there'
+        draft_text = f"Hi {first_name},\n\n{draft_text}"
+    
+    # Ensure proper closing if missing
+    closings = ['best regards', 'best', 'thanks', 'thank you', 'sincerely', 'regards', 'cheers']
+    has_closing = any(closing in draft_text.lower()[-100:] for closing in closings)
+    
+    if not has_closing:
+        draft_text = f"{draft_text}\n\nBest regards,"
+    
+    # Ensure double line breaks between paragraphs for readability
+    draft_text = draft_text.replace('\n\n\n', '\n\n')  # Remove triple breaks
+    
+    # Ensure there's space after greeting
+    if draft_text.startswith('Hi ') or draft_text.startswith('Hello '):
+        parts = draft_text.split('\n', 1)
+        if len(parts) == 2 and not parts[1].startswith('\n'):
+            draft_text = parts[0] + '\n\n' + parts[1]
+    
+    return draft_text
+
+# =====================================================
+# LABEL/FOLDER APPLICATION
+# =====================================================
+async def apply_email_label(
+    account: EmailAccount,
+    email_id: str,
+    category_id: str,
+    category_name: str,
+    platform: str
+) -> bool:
+    """Apply label/folder to email"""
+    try:
+        if platform == "gmail":
+            from fastapi.concurrency import run_in_threadpool
+            
+            creds = Credentials(
+                token=account.access_token,
+                refresh_token=account.refresh_token,
+                token_uri="https://oauth2.googleapis.com/token",
+                client_id=GMAIL_CLIENT_ID,
+                client_secret=GMAIL_CLIENT_SECRET
+            )
+            
+            service = await run_in_threadpool(
+                lambda: build("gmail", "v1", credentials=creds)
+            )
+            
+            labels_result = await run_in_threadpool(
+                lambda: service.users().labels().list(userId="me").execute()
+            )
+            labels = labels_result.get("labels", [])
+            
+            label_id = None
+            for label in labels:
+                if label["name"] == category_name:
+                    label_id = label["id"]
+                    break
+            
+            if not label_id:
+                label = await run_in_threadpool(
+                    lambda: service.users().labels().create(
+                        userId="me",
+                        body={"name": category_name, "labelListVisibility": "labelShow"}
+                    ).execute()
+                )
+                label_id = label["id"]
+            
+            await run_in_threadpool(
+                lambda: service.users().messages().modify(
+                    userId="me",
+                    id=email_id,
+                    body={"addLabelIds": [label_id]}
+                ).execute()
+            )
+            return True
+            
+        elif platform == "outlook":
+            headers = {"Authorization": f"Bearer {account.access_token}"}
+            
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.post(
+                    f"https://graph.microsoft.com/v1.0/me/messages/{email_id}/move",
+                    headers=headers,
+                    json={"destinationId": "inbox"}
+                )
+            return response.status_code == 201
+            
+        elif platform == "zoho":
+            return True  # Simplified
+        
+        return False
+        
+    except Exception as e:
+        print(f"Error applying label: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
+
+# =====================================================
+# DRAFT CREATION
+# =====================================================
+async def create_draft_reply(
+    account: EmailAccount,
+    email_id: str,
+    email: dict,
+    draft_content: str,
+    platform: str
+) -> bool:
+    """Create properly formatted draft reply in email platform"""
+    try:
+        print(f"📝 Creating draft for platform: {platform}")
+        print(f"   Email ID: {email_id}")
+        print(f"   To: {email['from_email']}")
+        print(f"   Subject: Re: {email['subject']}")
+        print(f"   Draft preview: {draft_content[:100]}...")
+        
+        if platform == "gmail":
+            result = await create_gmail_draft(account, email_id, email, draft_content)
+            print(f"   Gmail draft result: {'✅ Success' if result else '❌ Failed'}")
+            return result
+        elif platform == "outlook":
+            result = await create_outlook_draft(account, email, draft_content)
+            print(f"   Outlook draft result: {'✅ Success' if result else '❌ Failed'}")
+            return result
+        elif platform == "zoho":
+            result = await create_zoho_draft(account, email, draft_content)
+            print(f"   Zoho draft result: {'✅ Success' if result else '❌ Failed'}")
+            return result
+        else:
+            print(f"   ❌ Unknown platform: {platform}")
+            return False
+        
+    except Exception as e:
+        print(f"❌ Error in create_draft_reply: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
+    
+async def create_gmail_draft(account: EmailAccount, email_id: str, email: dict, draft_content: str) -> bool:
+    """Create Gmail draft with proper formatting"""
+    from fastapi.concurrency import run_in_threadpool
+    from email.mime.multipart import MIMEMultipart
+    from email.mime.text import MIMEText
+    import traceback
+    
+    try:
+        print(f"🔐 Creating Gmail credentials for draft...")
+        creds = Credentials(
+            token=account.access_token,
+            refresh_token=account.refresh_token,
+            token_uri="https://oauth2.googleapis.com/token",
+            client_id=GMAIL_CLIENT_ID,
+            client_secret=GMAIL_CLIENT_SECRET
+        )
+        
+        print(f"🔨 Building Gmail service...")
+        service = await run_in_threadpool(
+            lambda: build("gmail", "v1", credentials=creds)
+        )
+        
+        print(f"📧 Creating draft message for: {email['from_email']}")
+        print(f"📋 Subject: Re: {email['subject']}")
+        print(f"🆔 Thread ID: {email.get('thread_id', email_id)}")
+        
+        # Create multipart message for better formatting
+        message = MIMEMultipart('alternative')
+        message["To"] = email["from_email"]
+        message["Subject"] = f"Re: {email['subject']}"
+        
+        # Add threading headers for proper conversation grouping
+        if email.get("message_id_header"):
+            message["In-Reply-To"] = email["message_id_header"]
+            message["References"] = email["message_id_header"]
+            print(f"🔗 Added threading headers: {email['message_id_header']}")
+        
+        # Convert line breaks to HTML for better rendering
+        html_content = draft_content.replace('\n', '<br>\n')
+        
+        # Create plain text and HTML versions
+        text_part = MIMEText(draft_content, 'plain', 'utf-8')
+        html_part = MIMEText(
+            f'<div style="font-family: Arial, sans-serif; font-size: 12pt;">{html_content}</div>', 
+            'html', 
+            'utf-8'
+        )
+        
+        message.attach(text_part)
+        message.attach(html_part)
+        
+        print(f"🔐 Encoding message...")
+        raw_message = base64.urlsafe_b64encode(message.as_bytes()).decode("utf-8")
+        
+        print(f"📤 Sending draft to Gmail API...")
+        draft_response = await run_in_threadpool(
+            lambda: service.users().drafts().create(
+                userId="me",
+                body={
+                    "message": {
+                        "raw": raw_message,
+                        "threadId": email.get("thread_id")
+                    }
+                }
+            ).execute()
+        )
+        
+        draft_id = draft_response.get("id")
+        draft_message_id = draft_response.get("message", {}).get("id")
+        
+        print(f"✅ Gmail draft created successfully!")
+        print(f"   Draft ID: {draft_id}")
+        print(f"   Message ID: {draft_message_id}")
+        print(f"   Thread ID: {draft_response.get('message', {}).get('threadId')}")
+        
+        return True
+        
+    except Exception as e:
+        print(f"❌ Error creating Gmail draft: {e}")
+        print(f"   Email ID: {email_id}")
+        print(f"   From: {email.get('from_email')}")
+        print(f"   Subject: {email.get('subject')}")
+        traceback.print_exc()
+        return False
+    
+async def create_outlook_draft(account: EmailAccount, email: dict, draft_content: str) -> bool:
+    """Create Outlook draft with proper formatting"""
+    headers = {
+        "Authorization": f"Bearer {account.access_token}",
+        "Content-Type": "application/json"
+    }
+    
+    try:
+        # Convert line breaks to HTML
+        html_content = draft_content.replace('\n', '<br>')
+        
+        # Step 1: Create the draft message directly in Drafts folder
+        payload = {
+            "subject": f"Re: {email['subject']}",
+            "importance": "normal",
+            "body": {
+                "contentType": "HTML",
+                "content": f'<div style="font-family: Calibri, sans-serif; font-size: 11pt;">{html_content}</div>'
+            },
+            "toRecipients": [
+                {
+                    "emailAddress": {
+                        "address": email["from_email"],
+                        "name": email.get("from_name", "")
+                    }
+                }
+            ],
+            "inferenceClassification": "focused"
+        }
+        
+        # Add In-Reply-To header if available (for threading)
+        if email.get("message_id_header"):
+            payload["internetMessageHeaders"] = [
+                {
+                    "name": "In-Reply-To",
+                    "value": email["message_id_header"]
+                },
+                {
+                    "name": "References",
+                    "value": email["message_id_header"]
+                }
+            ]
+        
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            # Create message directly in Drafts folder
+            response = await client.post(
+                "https://graph.microsoft.com/v1.0/me/mailFolders/drafts/messages",
+                headers=headers,
+                json=payload
+            )
+            
+            print(f"📤 Outlook draft API response: {response.status_code}")
+            
+            if response.status_code in [200, 201]:
+                response_data = response.json()
+                draft_id = response_data.get("id")
+                print(f"✅ Outlook draft created successfully with ID: {draft_id}")
+                return True
+            else:
+                print(f"❌ Outlook draft creation failed: {response.status_code}")
+                print(f"Response: {response.text}")
+                return False
+                
+    except Exception as e:
+        print(f"❌ Error creating Outlook draft: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
+    
+async def create_zoho_draft(account: EmailAccount, email: dict, draft_content: str) -> bool:
+    """Create Zoho draft with proper formatting"""
+    headers = {
+        "Authorization": f"Zoho-oauthtoken {account.access_token}",
+        "Content-Type": "application/json"
+    }
+    
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            acc_response = await client.get(
+                "https://mail.zoho.com/api/accounts",
+                headers=headers
+            )
+        
+        if acc_response.status_code != 200:
+            print(f"❌ Zoho account fetch failed: {acc_response.status_code}")
+            return False
+        
+        accounts = acc_response.json().get("data", [])
+        if not accounts:
+            print(f"❌ No Zoho accounts found")
+            return False
+        
+        account_id = accounts[0]["accountId"]
+        
+        # Convert line breaks to HTML
+        html_content = draft_content.replace('\n', '<br>')
+        
+        # Zoho API format for creating drafts
+        draft_data = {
+            "fromAddress": account.account_email,
+            "toAddress": email["from_email"],
+            "subject": f"Re: {email['subject']}",
+            "content": f'<div style="font-family: Arial, sans-serif; font-size: 12pt;">{html_content}</div>',
+            "mailFormat": "html",
+            "askReceipt": "no"
+        }
+        
+        # Add threading headers if available
+        if email.get("message_id_header"):
+            draft_data["inReplyTo"] = email["message_id_header"]
+            draft_data["references"] = email["message_id_header"]
+        
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            # Use the correct Zoho Mail API endpoint for drafts
+            response = await client.post(
+                f"https://mail.zoho.com/api/accounts/{account_id}/messages",
+                headers=headers,
+                json=draft_data,
+                params={"mode": "save"}  # Important: save as draft
+            )
+            
+            print(f"📤 Zoho draft API response: {response.status_code}")
+            
+            if response.status_code in [200, 201]:
+                response_data = response.json()
+                print(f"✅ Zoho draft created successfully")
+                print(f"Response: {response_data}")
+                return True
+            else:
+                print(f"❌ Zoho draft creation failed: {response.status_code}")
+                print(f"Response: {response.text}")
+                return False
+                
+    except Exception as e:
+        print(f"❌ Error creating Zoho draft: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
+
+# =====================================================
+# WEBHOOK HANDLERS
+# =====================================================
+# async def process_new_gmail_messages(account: EmailAccount, history_id: str, db: AsyncSession):
+#     """Process new Gmail messages from push notification"""
+#     try:
+#         from fastapi.concurrency import run_in_threadpool
+        
+#         creds = Credentials(
+#             token=account.access_token,
+#             refresh_token=account.refresh_token,
+#             token_uri="https://oauth2.googleapis.com/token",
+#             client_id=GMAIL_CLIENT_ID,
+#             client_secret=GMAIL_CLIENT_SECRET
+#         )
+        
+#         service = await run_in_threadpool(
+#             lambda: build("gmail", "v1", credentials=creds)
+#         )
+        
+#         history = await run_in_threadpool(
+#             lambda: service.users().history().list(
+#                 userId="me",
+#                 startHistoryId=history_id
+#             ).execute()
+#         )
+        
+#         new_messages = []
+        
+#         # Get or create cache for this user
+#         if account.user_id not in processed_emails_cache:
+#             processed_emails_cache[account.user_id] = set()
+        
+#         for h in history.get("history", []):
+#             for msg in h.get("messagesAdded", []):
+#                 msg_id = msg["message"]["id"]
+                
+#                 # Check if already processed
+#                 fingerprint = get_email_fingerprint(msg_id, account.account_email)
+#                 if fingerprint in processed_emails_cache[account.user_id]:
+#                     print(f"⏭️ Skipping already processed email from webhook: {msg_id}")
+#                     continue
+                
+#                 new_messages.append({
+#                     "id": msg_id,
+#                     "data": msg["message"],
+#                     "platform": "gmail",
+#                     "fingerprint": fingerprint
+#                 })
+        
+#         if new_messages:
+#             result = await db.execute(
+#                 select(AIOnboardingTask).where(
+#                     AIOnboardingTask.user_id == account.user_id,
+#                     AIOnboardingTask.step_name == "create_smart_categories"
+#                 )
+#             )
+#             category_task = result.scalar_one_or_none()
+            
+#             if category_task and category_task.result_data:
+#                 selected_categories = category_task.result_data.get("selected_categories", [])
+#                 # Process WITHOUT database storage
+#                 await process_new_emails(
+#                     new_messages,
+#                     account,
+#                     selected_categories,
+#                     account.user_id
+#                 )
+    
+#     except Exception as e:
+#         print(f"Error processing Gmail push notification: {e}")
+#         import traceback
+#         traceback.print_exc()
+
+async def process_new_gmail_messages(account: EmailAccount, history_id: str, db: AsyncSession):
+    """Process new Gmail messages from push notification with consent check"""
+    try:
+        from fastapi.concurrency import run_in_threadpool
+        
+        creds = Credentials(
+            token=account.access_token,
+            refresh_token=account.refresh_token,
+            token_uri="https://oauth2.googleapis.com/token",
+            client_id=GMAIL_CLIENT_ID,
+            client_secret=GMAIL_CLIENT_SECRET
+        )
+        
+        service = await run_in_threadpool(
+            lambda: build("gmail", "v1", credentials=creds)
+        )
+        
+        history = await run_in_threadpool(
+            lambda: service.users().history().list(
+                userId="me",
+                startHistoryId=history_id
+            ).execute()
+        )
+        
+        new_messages = []
+        
+        if account.user_id not in processed_emails_cache:
+            processed_emails_cache[account.user_id] = set()
+        
+        for h in history.get("history", []):
+            for msg in h.get("messagesAdded", []):
+                msg_id = msg["message"]["id"]
+                
+                fingerprint = get_email_fingerprint(msg_id, account.account_email)
+                if fingerprint in processed_emails_cache[account.user_id]:
+                    continue
+                
+                new_messages.append({
+                    "id": msg_id,
+                    "data": msg["message"],
+                    "platform": "gmail",
+                    "fingerprint": fingerprint
+                })
+        
+        if new_messages:
+            # Get categories and consent
+            result = await db.execute(
+                select(AIOnboardingTask).where(
+                    AIOnboardingTask.user_id == account.user_id,
+                    AIOnboardingTask.step_name == "create_smart_categories"
+                )
+            )
+            category_task = result.scalar_one_or_none()
+            
+            if category_task and category_task.result_data:
+                selected_categories = category_task.result_data.get("selected_categories", [])
+                is_categories_agree = category_task.result_data.get("is_categories_agree", False)
+                
+                # Process with consent
+                await process_new_emails(
+                    new_messages,
+                    account,
+                    selected_categories,
+                    account.user_id,
+                    is_categories_agree  # NEW: Pass consent
+                )
+    
+    except Exception as e:
+        print(f"Error processing Gmail push notification: {e}")
+        import traceback
+        traceback.print_exc()
+        
+# =====================================================
+# WEBHOOK ENDPOINTS
+# =====================================================
+@router.post("/webhook/gmail")
+async def gmail_webhook(request: Request):
+    """Gmail Push Notification webhook"""
+    try:
+        body = await request.json()
+        
+        message = body.get("message", {})
+        data = message.get("data", "")
+        
+        if data:
+            decoded = base64.b64decode(data).decode("utf-8")
+            notification_data = json.loads(decoded)
+            
+            email_address = notification_data.get("emailAddress")
+            history_id = notification_data.get("historyId")
+            
+            async with async_session_maker() as db:
+                result = await db.execute(
+                    select(EmailAccount).where(EmailAccount.account_email == email_address)
+                )
+                account = result.scalar_one_or_none()
+                
+                if account:
+                    asyncio.create_task(
+                        process_new_gmail_messages(account, history_id, db)
+                    )
+        
+        return {"status": "ok"}
+    
+    except Exception as e:
+        print(f"Gmail webhook error: {e}")
+        return {"status": "error", "message": str(e)}
+
+@router.post("/webhook/outlook")
+async def outlook_webhook(request: Request):
+    """Microsoft Graph webhook for Outlook"""
+    try:
+        validation_token = request.query_params.get("validationToken")
+        if validation_token:
+            return {"validationResponse": validation_token}
+        
+        body = await request.json()
+        notifications = body.get("value", [])
+        
+        for notification in notifications:
+            resource = notification.get("resource")
+            # Process notification
+            
+        return {"status": "ok"}
+    
+    except Exception as e:
+        print(f"Outlook webhook error: {e}")
+        return {"status": "error", "message": str(e)}
