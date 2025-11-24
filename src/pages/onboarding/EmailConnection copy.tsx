@@ -19,7 +19,7 @@ interface EmailEntry {
 
 const EmailConnection = () => {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams] = useSearchParams(); // ADD THIS LINE
   const { emailAccounts, setEmailAccounts } = useOnboarding();
   const { toast } = useToast();
   const initializedFromContext = useRef(false);

@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Mail, Clock, TrendingUp, MessageSquare, HelpCircle, ChevronDown, Check } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -12,8 +11,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { useToast } from "@/hooks/use-toast";
-import { getAuthStatusAndRedirect, type User } from "@/lib/api/auth";
+import { getProfile, getAccessToken, type User } from "@/lib/api/auth";
 
 const emailAccounts = [
   { id: "all", name: "All Accounts", email: "", color: "bg-gradient-primary" },
@@ -84,78 +82,46 @@ const accountData = {
 const DashboardHome = () => {
   const [selectedAccount, setSelectedAccount] = useState("all");
   const [user, setUser] = useState<User | null>(null);
-  const [authLoading, setAuthLoading] = useState(true);
-  const [dataLoading, setDataLoading] = useState(false);
-  const navigate = useNavigate();
-  const { toast } = useToast();
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const currentAccount = emailAccounts.find(acc => acc.id === selectedAccount);
   const currentData = accountData[selectedAccount];
 
   useEffect(() => {
-    const checkAuthAndLoadUser = async () => {
+    const fetchUserProfile = async () => {
       try {
-        setAuthLoading(true);
+        setLoading(true);
+        setError(null);
         
-        // Check authentication status and determine redirect
-        const { isAuthenticated, redirect, user: authUser } = await getAuthStatusAndRedirect();
-        
-        if (!isAuthenticated) {
-          // Not authenticated - redirect to login
-          navigate('/login', { replace: true });
-          return;
+        const token = getAccessToken();
+        if (!token) {
+          throw new Error("No access token found");
         }
+
+        const profile = await getProfile(token);
+        setUser(profile);
+      } catch (err) {
+        console.error("Failed to fetch user profile:", err);
+        setError(err instanceof Error ? err.message : "Failed to load profile");
         
-        if (redirect === 'onboarding') {
-          // User exists but needs onboarding - redirect to onboarding
-          toast({
-            title: "Setup Required",
-            description: "Please complete your account setup",
-            variant: "default",
-          });
-          navigate('/onboarding/email-connection', { replace: true });
-          return;
-        }
-        
-        // User is authenticated and has completed onboarding
-        if (authUser) {
-          setUser(authUser);
-        } else {
-          // Fallback: try to get user from localStorage
-          const storedUser = localStorage.getItem('user');
-          if (storedUser) {
-            try {
-              setUser(JSON.parse(storedUser));
-            } catch (error) {
-              console.error('Failed to parse stored user:', error);
-              // If we can't get user data, redirect to login
-              navigate('/login', { replace: true });
-              return;
-            }
-          } else {
-            // No user data available - redirect to login
-            navigate('/login', { replace: true });
-            return;
+        // Fallback: try to get user from localStorage
+        const storedUser = localStorage.getItem('user');
+        if (storedUser) {
+          try {
+            setUser(JSON.parse(storedUser));
+            setError(null);
+          } catch {
+            // Ignore parse error
           }
         }
-        
-      } catch (error) {
-        console.error("Auth check failed:", error);
-        
-        toast({
-          title: "Authentication Error",
-          description: "Please login again",
-          variant: "destructive",
-        });
-        
-        navigate('/login', { replace: true });
       } finally {
-        setAuthLoading(false);
+        setLoading(false);
       }
     };
 
-    checkAuthAndLoadUser();
-  }, [navigate, toast]);
+    fetchUserProfile();
+  }, []);
 
   // Get user's first name for greeting
   const getFirstName = () => {
@@ -175,58 +141,38 @@ const DashboardHome = () => {
     return "there";
   };
 
-  // Show loading state while checking authentication
-  if (authLoading) {
-    return (
-      <div className="space-y-4 md:space-y-6 animate-pulse">
-        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-          <div>
-            <div className="h-8 w-48 bg-muted rounded"></div>
-            <div className="h-4 w-64 bg-muted rounded mt-2"></div>
-          </div>
-          <div className="h-10 w-48 bg-muted rounded"></div>
-        </div>
-        
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 md:gap-6">
-          {[...Array(4)].map((_, i) => (
-            <div key={i} className="h-32 bg-muted rounded-lg"></div>
-          ))}
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6">
-          <div className="h-64 bg-muted rounded-lg"></div>
-          <div className="h-64 bg-muted rounded-lg"></div>
-        </div>
-      </div>
-    );
-  }
-
-  // Don't render anything if user is not set (will redirect)
-  if (!user) {
-    return null;
-  }
-
   return (
     <div className="space-y-4 md:space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
         <div>
           <h1 className="text-xl md:text-2xl font-bold mb-1.5">
-            Hi, {getFirstName()} 👋
+            {loading ? (
+              <span className="inline-block bg-muted animate-pulse rounded w-48 h-8">&nbsp;</span>
+            ) : error ? (
+              "Hi there 👋"
+            ) : (
+              `Hi, ${getFirstName()} 👋`
+            )}
           </h1>
           <p className="text-sm text-muted-foreground">
             Manage your email workflow efficiently.
           </p>
+          {error && (
+            <p className="text-xs text-warning mt-1">
+              Note: Using cached profile data
+            </p>
+          )}
         </div>
         
         {/* Email Account Selector */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="w-full sm:w-auto sm:min-w-[240px] justify-between" disabled={dataLoading}>
+            <Button variant="outline" className="w-full sm:w-auto sm:min-w-[240px] justify-between">
               <div className="flex items-center gap-2">
-                <div className={`w-2 h-2 rounded-full ${currentAccount?.color}`} />
+                <div className={`w-2 h-2 rounded-full ${currentAccount.color}`} />
                 <div className="flex flex-col items-start">
-                  <span className="text-sm font-medium">{currentAccount?.name}</span>
-                  {currentAccount?.email && (
+                  <span className="text-sm font-medium">{currentAccount.name}</span>
+                  {currentAccount.email && (
                     <span className="text-xs text-muted-foreground">{currentAccount.email}</span>
                   )}
                 </div>
@@ -320,7 +266,7 @@ const DashboardHome = () => {
             </div>
           </CardContent>
         </Card>
-        
+
         <Card className="shadow-card hover:shadow-card-hover transition-all border-border">
           <CardHeader className="pb-3 pt-5 px-5">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">

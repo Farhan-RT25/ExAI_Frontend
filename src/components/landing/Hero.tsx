@@ -1,57 +1,116 @@
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Link } from "react-router-dom";
-import heroMockup from "@/assets/hero-mockup.png";
-import { ArrowRight } from "lucide-react";
+import { useState, useEffect } from "react";
+import { SiGmail } from "react-icons/si";
+import { MdEmail } from "react-icons/md";
+import FloatingLines from "@/components/FloatingLines";
 
-export const Hero = () => {
+// Mock FloatingLines component (replace with your actual implementation)
+// const FloatingLines = ({ enabledWaves, lineCount, lineDistance, bendRadius, bendStrength, interactive, parallax }) => (
+//   <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900" />
+// );
+
+// Mock SparkleButton component (replace with your actual implementation)
+const SparkleButton = ({ onClick, children }) => (
+  <button
+    onClick={onClick}
+    className="px-8 py-4 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-lg transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-purple-500/50"
+  >
+    {children}
+  </button>
+);
+
+export default function Hero() {
+  const words = ["Email", "Calendar", "Meeting"];
+  const [currentWordIndex, setCurrentWordIndex] = useState(0);
+  const [isAnimating, setIsAnimating] = useState(false);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setIsAnimating(true);
+      setTimeout(() => {
+        setCurrentWordIndex((prev) => (prev + 1) % words.length);
+        setIsAnimating(false);
+      }, 500);
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleRequestDemo = () => {
+    console.log("Request demo clicked");
+  };
+
   return (
-    <section className="relative pt-32 pb-20 md:pt-40 md:pb-32 overflow-hidden bg-black">
-      {/* Subtle gradient background */}
-      {/* <div className="absolute inset-0 bg-gradient-to-b from-secondary/30 to-background" /> */}
-      
-      {/* Floating blur elements */}
-      <div className="absolute top-40 right-0 w-96 h-96 bg-primary/10 rounded-full blur-3xl animate-pulse" />
-      <div className="absolute bottom-0 left-0 w-96 h-96 bg-accent/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: "1s" }} />
-      
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-        {/* Centered content */}
-        <div className="max-w-4xl mx-auto text-center mb-16 animate-fade-up">
-          <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl text-white font-semibold mb-6 leading-tight">
-            AI-Powered Email <br className="hidden sm:block" />
-            <span className="bg-gradient-primary bg-clip-text text-transparent">Management</span>
-          </h1>
-          <p className="text-lg md:text-xl text-white/70 mb-8 max-w-2xl mx-auto leading-relaxed">
-            Empower your users and protect their trust with AI solutions that prioritize transparency, fairness, and performance
-          </p>
-          
-          {/* Email input with CTA */}
-          <div className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto mb-4">
-            <Input 
-              type="email" 
-              placeholder="Enter your email"
-              className="h-12 text-base"
-            />
-            <Button size="lg" className="bg-gradient-primary hover:opacity-90 transition-opacity h-12 px-8">
-              Get Started
-            </Button>
-          </div>
-          <p className="text-xs text-white/50">
-            We care about your data in our <Link to="/privacy" className="underline hover:text-foreground transition-colors">Privacy Policy</Link>
-          </p>
-        </div>
+    <section className="relative pt-40 pb-10 h-[100vh] overflow-hidden">
+      {/* FloatingLines Background - only in Hero */}
+      <div className="absolute inset-0 w-full h-full">
+        <FloatingLines
+          enabledWaves={["top", "middle", "bottom"]}
+          lineCount={[5, 5, 5]}
+          lineDistance={[8, 6, 4]}
+          bendRadius={5.0}
+          bendStrength={-0.5}
+          interactive={true}
+          parallax={true}
+        />
+      </div>
 
-        {/* Hero mockup */}
-        <div className="relative w-full mx-auto animate-fade-in" style={{ animationDelay: "0.2s" }}>
-          <div className="relative rounded-2xl overflow-hidden shadow-2xl border border-border">
-            <img 
-              src={heroMockup} 
-              alt="Ex AI Dashboard showing email categorization and AI features" 
-              className="w-full h-auto"
-            />
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+        {/* Hero Content */}
+        <div className="text-center mb-16 animate-fade-up">
+          <h1 className="text-5xl sm:text-6xl md:text-7xl font-bold text-white mb-6 leading-tight">
+            AI-Powered
+            <br />
+            <span
+              className={`inline-block text-purple-400 transition-all duration-500 ${
+                isAnimating
+                  ? "opacity-0 -translate-y-4"
+                  : "opacity-100 translate-y-0"
+              }`}
+            >
+              {words[currentWordIndex]}
+            </span>
+            <br />
+            Management
+          </h1>
+          <p className="text-lg md:text-xl text-white/90 mb-10 max-w-3xl mx-auto leading-relaxed">
+            Empower your users and protect their trust with AI solutions that
+            prioritize transparency, fairness, and performance
+          </p>
+
+          {/* Email CTA with Sparkle Button */}
+          <div className="max-w-xl mx-auto mb-6">
+            <SparkleButton onClick={handleRequestDemo}>
+              Request Demo
+            </SparkleButton>
+          </div>
+
+          {/* Email Provider Icons */}
+          <div className="flex items-center justify-center gap-8 max-w-md mx-auto">
+            <div className="flex flex-col items-center gap-2 group cursor-pointer">
+              <div className="w-14 h-14 rounded-2xl bg-white/10 backdrop-blur-sm border border-white/20 flex items-center justify-center transition-all duration-300 group-hover:bg-white/20 group-hover:scale-110 group-hover:shadow-lg">
+                <SiGmail className="w-7 h-7 text-white" />
+              </div>
+              <span className="text-xs text-white/70 font-medium">Gmail</span>
+            </div>
+
+            <div className="flex flex-col items-center gap-2 group cursor-pointer">
+              <div className="w-14 h-14 rounded-2xl bg-white/10 backdrop-blur-sm border border-white/20 flex items-center justify-center transition-all duration-300 group-hover:bg-white/20 group-hover:scale-110 group-hover:shadow-lg">
+                <SiGmail className="w-7 h-7 text-white" />
+              </div>
+              <span className="text-xs text-white/70 font-medium">Outlook</span>
+            </div>
+
+            <div className="flex flex-col items-center gap-2 group cursor-pointer">
+              <div className="w-14 h-14 rounded-2xl bg-white/10 backdrop-blur-sm border border-white/20 flex items-center justify-center transition-all duration-300 group-hover:bg-white/20 group-hover:scale-110 group-hover:shadow-lg">
+                <MdEmail className="w-8 h-8 text-white" />
+              </div>
+              <span className="text-xs text-white/70 font-medium">
+                Zoho Mail
+              </span>
+            </div>
           </div>
         </div>
       </div>
     </section>
   );
-};
+}

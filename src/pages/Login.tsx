@@ -7,7 +7,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { Mail, Eye, EyeOff, Sparkles, Star } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { loginAndGetRedirect, saveAuthData } from "@/lib/api/auth";
+import { login, saveAuthData } from "@/lib/api/auth";
 import { initiateGoogleLogin } from "@/lib/api/google";
 import { initiateMicrosoftLogin } from "@/lib/api/microsoft";
 import { initiateZohoLogin } from "@/lib/api/zoho";
@@ -46,60 +46,32 @@ const Login = () => {
     }
 
     setIsLoading(true);
-    setErrors({});
 
     try {
-      // Use the enhanced login function that determines redirect
-      const authResponse = await loginAndGetRedirect({ email, password });
+      const authResponse = await login({ email, password });
       
       // Save auth data to localStorage
       saveAuthData(authResponse);
       
-      // Show success toast
       toast({
         title: "Logged in successfully!",
-        description: `Welcome back, ${authResponse.user.full_name || authResponse.user.email}`,
+        description: `Welcome back, ${authResponse.user.full_name}`,
       });
       
-      // Navigate based on the redirect path determined by the backend
-      navigate(`/${authResponse.redirect}`, { replace: true });
-
+      // Navigate to dashboard
+      navigate('/dashboard');
     } catch (error) {
-      console.error('Login error:', error);
-      
-      const errorMessage = error instanceof Error ? error.message : "Login failed";
-      
-      // Handle specific error cases
-      if (errorMessage.includes('Invalid User – Sign up first')) {
-        toast({
-          title: "Account not found",
-          description: "Invalid User – Sign up first",
-          variant: "destructive",
-        });
-        
-        // Redirect to signup page after showing error
-        setTimeout(() => {
-          navigate('/signup', { replace: true });
-        }, 2000);
-      } else {
-        toast({
-          title: "Login failed",
-          description: errorMessage,
-          variant: "destructive",
-        });
-        
-        // Set form errors for display
-        if (errorMessage.includes('email') || errorMessage.includes('password')) {
-          setErrors({ general: errorMessage });
-        }
-      }
+      toast({
+        title: "Login failed",
+        description: error instanceof Error ? error.message : "Invalid credentials",
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleOAuthLogin = (provider: string) => {
-    // Add cache busting and intent tracking
     switch (provider) {
       case "Google":
         initiateGoogleLogin();
@@ -114,7 +86,6 @@ const Login = () => {
         toast({
           title: `${provider} login`,
           description: "Provider not configured",
-          variant: "destructive",
         });
     }
   };
@@ -185,13 +156,6 @@ const Login = () => {
           <h1 className="text-2xl font-bold text-center mb-2">Log in</h1>
           <p className="text-sm text-muted-foreground text-center mb-8">Welcome back! Please enter your details.</p>
           
-          {/* Show general error message */}
-          {errors.general && (
-            <div className="mb-4 p-3 bg-destructive/10 border border-destructive/20 rounded-md">
-              <p className="text-sm text-destructive">{errors.general}</p>
-            </div>
-          )}
-          
           <form onSubmit={handleSubmit} className="space-y-4 mb-6">
             <div>
               <Label htmlFor="email" className="text-sm font-medium">Email*</Label>
@@ -200,13 +164,7 @@ const Login = () => {
                 type="email"
                 placeholder="Enter your email"
                 value={email}
-                onChange={(e) => {
-                  setEmail(e.target.value);
-                  // Clear errors when user starts typing
-                  if (errors.email) {
-                    setErrors(prev => ({ ...prev, email: '' }));
-                  }
-                }}
+                onChange={(e) => setEmail(e.target.value)}
                 className={`mt-1.5 ${errors.email ? "border-danger" : ""}`}
                 disabled={isLoading}
               />
@@ -223,13 +181,7 @@ const Login = () => {
                   type={showPassword ? "text" : "password"}
                   placeholder="Enter your password"
                   value={password}
-                  onChange={(e) => {
-                    setPassword(e.target.value);
-                    // Clear errors when user starts typing
-                    if (errors.password) {
-                      setErrors(prev => ({ ...prev, password: '' }));
-                    }
-                  }}
+                  onChange={(e) => setPassword(e.target.value)}
                   className={`${errors.password ? "border-danger pr-10" : "pr-10"}`}
                   disabled={isLoading}
                 />

@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Oxygen:wght@300;400;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -79,6 +81,7 @@ All colors MUST be HSL.
   }
 
   html, body, #root {
+    font-family: 'Oxygen', sans-serif;
     margin: 0 !important;
     padding: 0 !important;
     height: 100%;
