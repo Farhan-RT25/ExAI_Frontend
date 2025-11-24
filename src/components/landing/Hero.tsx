@@ -40,28 +40,28 @@ export default function Hero() {
   };
 
   return (
-    <section className="relative pt-40 pb-10 h-[100vh] overflow-hidden">
-      {/* FloatingLines Background - only in Hero */}
-      <div className="absolute inset-0 w-full h-full">
-        <FloatingLines
-          enabledWaves={["top", "middle", "bottom"]}
-          lineCount={[5, 5, 5]}
-          lineDistance={[8, 6, 4]}
-          bendRadius={5.0}
-          bendStrength={-0.5}
-          interactive={true}
-          parallax={true}
-        />
-      </div>
+    <section className="relative pt-32 pb-20 min-h-screen flex items-center overflow-hidden bg-background">
+      {/* Animated background gradient */}
+      <div className="absolute inset-0 bg-gradient-to-b from-background via-background to-card" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-primary/10 via-background to-background" />
+      
+      {/* Floating orbs */}
+      <div className="absolute top-20 left-10 w-72 h-72 bg-primary/20 rounded-full blur-3xl animate-pulse" />
+      <div className="absolute bottom-20 right-10 w-96 h-96 bg-primary/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: "1s" }} />
 
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-        {/* Hero Content */}
-        <div className="text-center mb-16 animate-fade-up">
-          <h1 className="text-5xl sm:text-6xl md:text-7xl font-bold text-white mb-6 leading-tight">
+        <div className="max-w-5xl mx-auto text-center animate-fade-up">
+          {/* Badge */}
+          <div className="inline-flex items-center px-4 py-2 rounded-full border border-primary/30 bg-primary/5 backdrop-blur-sm mb-8">
+            <span className="text-sm font-medium text-primary">Powered by Advanced AI</span>
+          </div>
+
+          {/* Main heading */}
+          <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-bold mb-6 leading-tight">
             AI-Powered
             <br />
             <span
-              className={`inline-block text-purple-400 transition-all duration-500 ${
+              className={`inline-block bg-gradient-primary bg-clip-text text-transparent transition-all duration-500 ${
                 isAnimating
                   ? "opacity-0 -translate-y-4"
                   : "opacity-100 translate-y-0"
@@ -72,41 +72,37 @@ export default function Hero() {
             <br />
             Management
           </h1>
-          <p className="text-lg md:text-xl text-white/90 mb-10 max-w-3xl mx-auto leading-relaxed">
-            Empower your users and protect their trust with AI solutions that
-            prioritize transparency, fairness, and performance
+          
+          <p className="text-lg md:text-xl text-muted-foreground mb-12 max-w-3xl mx-auto leading-relaxed">
+            Empower your workflow with AI solutions that prioritize transparency,
+            efficiency, and intelligent automation for your email management needs.
           </p>
 
-          {/* Email CTA with Sparkle Button */}
-          <div className="max-w-xl mx-auto mb-6">
+          {/* CTA Button */}
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12">
             <SparkleButton onClick={handleRequestDemo}>
-              Request Demo
+              Get Started Free
             </SparkleButton>
+            <button className="px-8 py-4 text-foreground font-semibold rounded-lg transition-all duration-300 hover:text-primary">
+              Watch Demo →
+            </button>
           </div>
 
           {/* Email Provider Icons */}
-          <div className="flex items-center justify-center gap-8 max-w-md mx-auto">
-            <div className="flex flex-col items-center gap-2 group cursor-pointer">
-              <div className="w-14 h-14 rounded-2xl bg-white/10 backdrop-blur-sm border border-white/20 flex items-center justify-center transition-all duration-300 group-hover:bg-white/20 group-hover:scale-110 group-hover:shadow-lg">
-                <SiGmail className="w-7 h-7 text-white" />
-              </div>
-              <span className="text-xs text-white/70 font-medium">Gmail</span>
+          <div className="flex items-center justify-center gap-6 flex-wrap">
+            <div className="flex items-center gap-3 px-6 py-3 rounded-2xl bg-card/50 border border-border backdrop-blur-sm hover:border-primary/30 transition-all duration-300 group cursor-pointer">
+              <SiGmail className="w-6 h-6 text-foreground group-hover:text-primary transition-colors" />
+              <span className="text-sm font-medium text-muted-foreground group-hover:text-foreground transition-colors">Gmail</span>
             </div>
 
-            <div className="flex flex-col items-center gap-2 group cursor-pointer">
-              <div className="w-14 h-14 rounded-2xl bg-white/10 backdrop-blur-sm border border-white/20 flex items-center justify-center transition-all duration-300 group-hover:bg-white/20 group-hover:scale-110 group-hover:shadow-lg">
-                <SiGmail className="w-7 h-7 text-white" />
-              </div>
-              <span className="text-xs text-white/70 font-medium">Outlook</span>
+            <div className="flex items-center gap-3 px-6 py-3 rounded-2xl bg-card/50 border border-border backdrop-blur-sm hover:border-primary/30 transition-all duration-300 group cursor-pointer">
+              <SiGmail className="w-6 h-6 text-foreground group-hover:text-primary transition-colors" />
+              <span className="text-sm font-medium text-muted-foreground group-hover:text-foreground transition-colors">Outlook</span>
             </div>
 
-            <div className="flex flex-col items-center gap-2 group cursor-pointer">
-              <div className="w-14 h-14 rounded-2xl bg-white/10 backdrop-blur-sm border border-white/20 flex items-center justify-center transition-all duration-300 group-hover:bg-white/20 group-hover:scale-110 group-hover:shadow-lg">
-                <MdEmail className="w-8 h-8 text-white" />
-              </div>
-              <span className="text-xs text-white/70 font-medium">
-                Zoho Mail
-              </span>
+            <div className="flex items-center gap-3 px-6 py-3 rounded-2xl bg-card/50 border border-border backdrop-blur-sm hover:border-primary/30 transition-all duration-300 group cursor-pointer">
+              <MdEmail className="w-6 h-6 text-foreground group-hover:text-primary transition-colors" />
+              <span className="text-sm font-medium text-muted-foreground group-hover:text-foreground transition-colors">Zoho Mail</span>
             </div>
           </div>
         </div>
