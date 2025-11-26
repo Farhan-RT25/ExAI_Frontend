@@ -10,6 +10,7 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
+    /* Dark Mode (Default) */
     --background: 240 10% 3.9%;
     --foreground: 0 0% 98%;
 
@@ -73,6 +74,70 @@ All colors MUST be HSL.
     --sidebar-border: 240 6% 20%;
     --sidebar-ring: 258 90% 66%;
   }
+
+  /* Light Mode */
+  .light {
+    --background: 0 0% 100%;
+    --foreground: 240 10% 3.9%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 3.9%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 10% 3.9%;
+
+    --primary: 258 90% 66%;
+    --primary-dark: 258 80% 60%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 240 4.8% 95.9%;
+    --secondary-foreground: 240 5.9% 10%;
+
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 100%;
+
+    --info: 210 79% 46%;
+    --info-foreground: 0 0% 100%;
+
+    --teal: 174 62% 47%;
+    --teal-foreground: 0 0% 100%;
+
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+
+    --danger: 350 89% 60%;
+    --danger-foreground: 0 0% 100%;
+
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 3.8% 46.1%;
+
+    --accent: 240 4.8% 95.9%;
+    --accent-foreground: 240 5.9% 10%;
+
+    --destructive: 350 89% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 240 5.9% 90%;
+    --input: 240 5.9% 90%;
+    --ring: 258 90% 66%;
+
+    --gradient-primary: linear-gradient(135deg, hsl(258 90% 66%), hsl(270 80% 70%));
+    --gradient-hero: linear-gradient(135deg, hsl(258 90% 66%) 0%, hsl(270 80% 70%) 100%);
+    --gradient-dark: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(240 4.8% 95.9%) 100%);
+
+    --shadow-card: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    --shadow-card-hover: 0 10px 15px -3px rgb(0 0 0 / 0.2), 0 4px 6px -4px rgb(0 0 0 / 0.2);
+    --shadow-glow: 0 0 40px hsl(258 90% 66% / 0.15);
+
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 240 10% 3.9%;
+    --sidebar-primary: 258 90% 66%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 240 5.9% 90%;
+    --sidebar-ring: 258 90% 66%;
+  }
 }
 
 @layer base {
@@ -90,38 +155,23 @@ All colors MUST be HSL.
   }
 
   body {
-    @apply bg-transparent text-foreground;
+    @apply bg-background text-foreground;
   }
 
-  /* In your index.css file, define the custom component style */
-
+  /* OAuth Slide Button */
   .oauth-slide-btn {
-    /* Layout and Base Style */
     @apply flex justify-center items-center gap-2;
-    /* Use your system colors */
     background-color: hsl(var(--background));
     border: 2px solid hsl(var(--primary));
     color: hsl(var(--foreground));
-
-    /* Size and Shape */
     @apply w-[250px] h-[40px] px-4 py-2 rounded-md;
-
-    /* Typography and Cursor */
     @apply text-base font-semibold cursor-pointer;
-
-    /* Custom Effects (Box-Shadow and Transition) */
     box-shadow: 4px 4px hsl(var(--primary) / 0.1);
     transition: all 250ms;
     position: relative;
-    /* Essential for pseudo-element positioning */
     overflow: hidden;
-    /* Essential to hide ::before before it slides */
     z-index: 1;
   }
-
-  /* ------------------------------------------------ */
-  /* Pseudo-element for the Slide Effect */
-  /* ------------------------------------------------ */
 
   .oauth-slide-btn::before {
     content: "";
@@ -130,25 +180,43 @@ All colors MUST be HSL.
     left: 0;
     height: 100%;
     width: 0;
-    /* Use a dark color for the slide-over effect */
     background-color: hsl(var(--primary));
     z-index: -1;
     box-shadow: 4px 8px 19px -3px rgba(0, 0, 0, 0.27);
     transition: all 250ms;
   }
 
-  /* ------------------------------------------------ */
-  /* Hover States */
-  /* ------------------------------------------------ */
-
   .oauth-slide-btn:hover {
-    /* Set the text color change on hover */
     color: hsl(var(--primary-foreground));
-    /* e.g., white, for contrast */
   }
 
   .oauth-slide-btn:hover::before {
-    /* Makes the pseudo-element slide across */
     width: 100%;
+  }
+
+  /* Shadow utilities */
+  .shadow-card {
+    box-shadow: var(--shadow-card);
+  }
+
+  .shadow-card-hover {
+    box-shadow: var(--shadow-card-hover);
+  }
+
+  .shadow-glow {
+    box-shadow: var(--shadow-glow);
+  }
+
+  /* Gradient utilities */
+  .bg-gradient-primary {
+    background: var(--gradient-primary);
+  }
+
+  .bg-gradient-hero {
+    background: var(--gradient-hero);
+  }
+
+  .bg-gradient-dark {
+    background: var(--gradient-dark);
   }
 }

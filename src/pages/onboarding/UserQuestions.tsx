@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { useNavigate } from "react-router-dom";
 import { useOnboarding } from "@/contexts/OnboardingContext";
-import { Mail } from "lucide-react";
+import { Check, ChevronRight } from "lucide-react";
 
 const questions = [
   {
@@ -71,6 +71,14 @@ interface UserAnswers {
   emailsTo: string;
 }
 
+const steps = [
+  { number: 1, label: "Email Connection" },
+  { number: 2, label: "OAuth Authorization" },
+  { number: 3, label: "User Questions" },
+  { number: 4, label: "Categories" },
+  { number: 5, label: "Processing" },
+];
+
 const UserQuestions = () => {
   const navigate = useNavigate();
   const { userAnswers, setUserAnswers } = useOnboarding();
@@ -92,13 +100,6 @@ const UserQuestions = () => {
   const currentOtherText = otherTexts[currentQ.id] || "";
   const isOtherSelected = currentAnswer === "Other";
 
-  // Restore otherText on question change
-  useState(() => {
-    if (isOtherSelected) {
-      setOtherTexts((prev) => ({ ...prev, [currentQ.id]: currentOtherText }));
-    }
-  });
-
   const handleAnswerChange = (value: string) => {
     setAnswers((prev) => ({ ...prev, [currentQ.id]: value } as UserAnswers));
     if (value !== "Other") {
@@ -119,35 +120,27 @@ const UserQuestions = () => {
     if (isOtherSelected && currentOtherText.trim()) {
       finalAnswer = currentOtherText.trim();
     } else if (isOtherSelected) {
-      return; // Don't proceed if Other is selected but no text
+      return;
     }
 
     const newAnswers = { ...answers, [currentQ.id]: finalAnswer } as UserAnswers;
     setAnswers(newAnswers);
 
-    // If there are more questions, go to next
     if (currentQuestion < questions.length - 1) {
       setCurrentQuestion(currentQuestion + 1);
       return;
     }
 
-    // Last question: Validate all answers are filled
     const hasAllAnswers = Object.values(newAnswers).every((ans) => ans.trim().length > 0);
     if (!hasAllAnswers) {
-      // Optionally show error toast here
       console.warn("Incomplete answers detected");
       return;
     }
 
     setLoading(true);
     try {
-      // Save to context
       setUserAnswers(newAnswers);
-
-      // Small delay for UX (simulate processing)
       await new Promise((resolve) => setTimeout(resolve, 500));
-
-      // Navigate to categories page - AI recommendation will happen there
       navigate("/onboarding/categories");
     } catch (error) {
       console.error("Error saving answers:", error);
@@ -158,7 +151,6 @@ const UserQuestions = () => {
 
   const handleBack = () => {
     if (currentQuestion > 0) {
-      // Save current otherText before going back
       if (isOtherSelected && currentOtherText.trim()) {
         setOtherTexts((prev) => ({ ...prev, [currentQ.id]: currentOtherText }));
       }
@@ -171,92 +163,124 @@ const UserQuestions = () => {
   const canProceed = (currentAnswer && currentAnswer !== "Other") || (isOtherSelected && currentOtherText.trim().length > 0);
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
-      <div className="w-full max-w-2xl mb-8">
-        <div className="flex items-center justify-center gap-2">
-          <div className="w-3 h-3 rounded-full bg-primary"></div>
-          <div className="w-3 h-3 rounded-full bg-primary"></div>
-          <div className="w-3 h-3 rounded-full bg-primary"></div>
-          <div className="w-3 h-3 rounded-full bg-muted"></div>
-          <div className="w-3 h-3 rounded-full bg-muted"></div>
-        </div>
-        <p className="text-center text-sm text-muted-foreground mt-2">Step 3 of 5</p>
-      </div>
-
-      <Card className="w-full max-w-2xl p-8 shadow-card-hover">
-        <div className="flex justify-center mb-6">
-          <div className="p-3 bg-gradient-primary rounded-xl">
-            <Mail className="h-8 w-8 text-primary-foreground" />
-          </div>
-        </div>
-
-        <h1 className="text-3xl font-bold text-center mb-2">Tell Us About Yourself</h1>
-        <p className="text-muted-foreground text-center mb-8">
-          Help us personalize your experience
-        </p>
-
-        <div className="mb-6">
-          <p className="text-sm text-muted-foreground text-center">
-            Question {currentQuestion + 1} of {questions.length}
-          </p>
-        </div>
-
-        <div className="mb-8">
-          <h2 className="text-xl font-semibold mb-6">{currentQ.question}</h2>
-
-          <RadioGroup
-            value={currentAnswer}
-            onValueChange={handleAnswerChange}
-            className="space-y-3"
-          >
-            {currentQ.options.map((option, index) => (
-              <div key={index}>
-                <Card
-                  className={`p-4 cursor-pointer transition-all ${
-                    currentAnswer === option
-                      ? "border-primary border-2 bg-primary/5"
-                      : "border-2 border-border hover:border-primary/50"
-                  }`}
-                >
-                  <div className="flex items-center space-x-3">
-                    <RadioGroupItem value={option} id={`option-${currentQuestion}-${index}`} />
-                    <Label htmlFor={`option-${currentQuestion}-${index}`} className="flex-grow cursor-pointer">
-                      {option}
-                    </Label>
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <Card className="w-full max-w-3xl bg-card shadow-card-hover rounded-xl overflow-hidden border-border">
+        {/* Progress Breadcrumb */}
+        <div className="bg-secondary/50 px-8 py-6 border-b border-border">
+          <div className="flex items-center justify-between max-w-2xl mx-auto">
+            {steps.map((step, index) => (
+              <div key={step.number} className="flex items-center">
+                <div className="flex flex-col items-center">
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold transition-all ${
+                    step.number <= 3
+                      ? 'bg-primary text-primary-foreground shadow-glow' 
+                      : 'bg-muted text-muted-foreground'
+                  }`}>
+                    {step.number < 3 ? <Check className="h-5 w-5" /> : step.number}
                   </div>
-                </Card>
-
-                {option === "Other" && currentAnswer === "Other" && (
-                  <div className="mt-3 ml-8">
-                    <Input
-                      placeholder="Please specify..."
-                      value={currentOtherText}
-                      onChange={(e) => handleOtherTextChange(e.target.value)}
-                      className="max-w-md"
-                      disabled={loading}
-                    />
-                  </div>
+                  <span className={`text-xs mt-2 font-medium ${
+                    step.number <= 3 ? 'text-primary' : 'text-muted-foreground'
+                  }`}>
+                    {step.label}
+                  </span>
+                </div>
+                {index < steps.length - 1 && (
+                  <ChevronRight className="h-5 w-5 text-muted-foreground mx-2 mb-6" />
                 )}
               </div>
             ))}
-          </RadioGroup>
+          </div>
         </div>
 
-        <div className="flex items-center justify-between">
-          <Button variant="ghost" onClick={handleBack} disabled={loading}>
-            Back
-          </Button>
-          <Button
-            onClick={handleNext}
-            disabled={!canProceed || loading}
-            className="min-w-32"
-          >
-            {loading
-              ? "Processing..."
-              : currentQuestion < questions.length - 1
-              ? "Next Question"
-              : "Continue"}
-          </Button>
+        {/* Content */}
+        <div className="p-8">
+          <div className="text-center mb-8">
+            <h1 className="text-3xl font-bold text-foreground mb-2">Tell Us About Yourself</h1>
+            <p className="text-muted-foreground">
+              Help us personalize your experience
+            </p>
+            <p className="text-sm text-primary font-medium mt-2">
+              Question {currentQuestion + 1} of {questions.length}
+            </p>
+          </div>
+
+          <div className="max-w-2xl mx-auto">
+            <h2 className="text-xl font-semibold mb-6 text-foreground">{currentQ.question}</h2>
+
+            <RadioGroup
+              value={currentAnswer}
+              onValueChange={handleAnswerChange}
+              className="space-y-3"
+            >
+              {currentQ.options.map((option, index) => (
+                <div key={index}>
+                  <RadioGroupItem 
+                    value={option} 
+                    id={`option-${currentQuestion}-${index}`} 
+                    className="peer sr-only"
+                  />
+                  <Label
+                    htmlFor={`option-${currentQuestion}-${index}`}
+                    className={`flex items-center p-4 border-2 rounded-lg cursor-pointer transition-all ${
+                      currentAnswer === option
+                        ? "border-primary bg-primary/10"
+                        : "border-border hover:border-primary/50 hover:bg-secondary/50"
+                    }`}
+                  >
+                    <div className="flex items-center flex-grow">
+                      <div className={`w-5 h-5 rounded-full border-2 mr-3 flex items-center justify-center ${
+                        currentAnswer === option 
+                          ? 'border-primary bg-primary' 
+                          : 'border-muted-foreground'
+                      }`}>
+                        {currentAnswer === option && (
+                          <div className="w-2 h-2 bg-primary-foreground rounded-full"></div>
+                        )}
+                      </div>
+                      <span className={currentAnswer === option ? 'font-medium text-foreground' : 'text-muted-foreground'}>
+                        {option}
+                      </span>
+                    </div>
+                  </Label>
+
+                  {option === "Other" && currentAnswer === "Other" && (
+                    <div className="mt-3 ml-8">
+                      <Input
+                        placeholder="Please specify..."
+                        value={currentOtherText}
+                        onChange={(e) => handleOtherTextChange(e.target.value)}
+                        className="h-11 bg-background border-border"
+                        disabled={loading}
+                      />
+                    </div>
+                  )}
+                </div>
+              ))}
+            </RadioGroup>
+          </div>
+
+          {/* Footer */}
+          <div className="flex items-center justify-between mt-10 pt-6 border-t border-border">
+            <Button 
+              variant="ghost" 
+              onClick={handleBack} 
+              disabled={loading}
+              className="text-muted-foreground hover:text-foreground"
+            >
+              Back
+            </Button>
+            <Button
+              onClick={handleNext}
+              disabled={!canProceed || loading}
+              className="bg-primary hover:bg-primary-dark text-primary-foreground px-8 h-11"
+            >
+              {loading
+                ? "Processing..."
+                : currentQuestion < questions.length - 1
+                ? "Next Question"
+                : "Continue"}
+            </Button>
+          </div>
         </div>
       </Card>
     </div>

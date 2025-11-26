@@ -1,4 +1,4 @@
-import { MdDashboard, MdCategory, MdEdit, MdVideoLibrary, MdLink, MdSettings, MdLogout, MdMail } from "react-icons/md";
+import { MdDashboard, MdCategory, MdEdit, MdVideoLibrary, MdLink, MdSettings, MdLogout, MdMail, MdLightMode, MdDarkMode } from "react-icons/md";
 import { NavLink, useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -15,6 +15,7 @@ import {
 import { useIsMobile } from "@/hooks/use-mobile";
 import { logout } from "@/lib/api/auth";
 import { useToast } from "@/hooks/use-toast";
+import { useState, useEffect } from "react";
 
 const menuItems = [
   { title: "Dashboard", url: "/dashboard", icon: MdDashboard },
@@ -30,6 +31,38 @@ export function AppSidebar() {
   const isMobile = useIsMobile();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [isDarkMode, setIsDarkMode] = useState(true);
+
+  // Initialize theme from localStorage or default to dark
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('theme');
+    const isDark = savedTheme !== 'light';
+    setIsDarkMode(isDark);
+    
+    if (isDark) {
+      document.documentElement.classList.remove('light');
+    } else {
+      document.documentElement.classList.add('light');
+    }
+  }, []);
+
+  const toggleTheme = () => {
+    const newIsDark = !isDarkMode;
+    setIsDarkMode(newIsDark);
+    
+    if (newIsDark) {
+      document.documentElement.classList.remove('light');
+      localStorage.setItem('theme', 'dark');
+    } else {
+      document.documentElement.classList.add('light');
+      localStorage.setItem('theme', 'light');
+    }
+
+    toast({
+      title: `${newIsDark ? 'Dark' : 'Light'} mode enabled`,
+      description: `Switched to ${newIsDark ? 'dark' : 'light'} mode`,
+    });
+  };
 
   const handleNavClick = () => {
     if (isMobile) {
@@ -63,7 +96,7 @@ export function AppSidebar() {
               <div className="p-2 mb-5 mt-2 bg-gradient-primary rounded-sm">
                 <MdMail className="h-4 w-4 text-primary-foreground" />
               </div>
-              {!isCollapsed && <span className="font-semibold mb-3">Ex AI</span>}
+              {!isCollapsed && <span className="font-semibold mb-3">Nyx</span>}
             </div>
             {isMobile && (
               <button
@@ -95,8 +128,8 @@ export function AppSidebar() {
                           isCollapsed ? 'px-0 py-2 justify-center' : 'px-3'
                         } ${
                           isActive
-                          ? "bg-primary/10 text-primary font-semibold hover:bg-primary/15 border border-primary"
-                          : "text-primary hover:bg-primary/10 hover:text-primary"
+                          ? "bg-primary/10 text-primary font-semibold hover:bg-primary/15 border border-primary rounded-md"
+                          : "text-foreground hover:bg-primary/10 hover:text-primary rounded-md"
                         }`}>
                           <item.icon className={`h-4 w-4 flex-shrink-0 ${isActive ? 'fill-current' : ''}`} />
                           {!isCollapsed && (
@@ -128,21 +161,53 @@ export function AppSidebar() {
                   <NavLink
                     to="/dashboard/settings"
                     onClick={handleNavClick}
-                    className={({ isActive }) =>
-                      isActive
-                        ? "bg-primary/10 text-primary font-semibold hover:text-primary"
-                        : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                    }
+                    className="!px-0 !py-5"
                   >
-                    <MdSettings className="h-4 w-4" />
-                    {!isCollapsed && <span>Settings</span>}
+                    {({ isActive }) => (
+                      <div className={`flex items-center gap-3 py-2 text-sm w-full ${
+                        isCollapsed ? 'px-0 py-2 justify-center' : 'px-3'
+                      } ${
+                        isActive
+                          ? "bg-primary/10 text-primary font-semibold hover:bg-primary/15 border border-primary rounded-md"
+                          : "text-foreground hover:bg-primary/10 hover:text-primary rounded-md"
+                      }`}>
+                        <MdSettings className="h-4 w-4 flex-shrink-0" />
+                        {!isCollapsed && <span>Settings</span>}
+                      </div>
+                    )}
                   </NavLink>
                 </SidebarMenuButton>
               </SidebarMenuItem>
+              
               <SidebarMenuItem>
-                <SidebarMenuButton onClick={handleLogout}>
-                  <MdLogout className="h-4 w-4" />
-                  {!isCollapsed && <span>Logout</span>}
+                <SidebarMenuButton 
+                  onClick={toggleTheme}
+                  className="!px-0 !py-5"
+                >
+                  <div className={`flex items-center gap-3 py-2 text-sm w-full ${
+                    isCollapsed ? 'px-0 py-2 justify-center' : 'px-3'
+                  } text-foreground hover:bg-primary/10 hover:text-primary rounded-md cursor-pointer`}>
+                    {isDarkMode ? (
+                      <MdLightMode className="h-4 w-4 flex-shrink-0" />
+                    ) : (
+                      <MdDarkMode className="h-4 w-4 flex-shrink-0" />
+                    )}
+                    {!isCollapsed && <span>{isDarkMode ? 'Light Mode' : 'Dark Mode'}</span>}
+                  </div>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+
+              <SidebarMenuItem>
+                <SidebarMenuButton 
+                  onClick={handleLogout}
+                  className="!px-0 !py-5"
+                >
+                  <div className={`flex items-center gap-3 py-2 text-sm w-full ${
+                    isCollapsed ? 'px-0 py-2 justify-center' : 'px-3'
+                  } text-foreground hover:bg-primary/10 hover:text-primary rounded-md cursor-pointer`}>
+                    <MdLogout className="h-4 w-4 flex-shrink-0" />
+                    {!isCollapsed && <span>Logout</span>}
+                  </div>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>

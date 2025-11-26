@@ -6,7 +6,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useOnboarding } from "@/contexts/OnboardingContext";
-import { Check, X, Mail, Loader2 } from "lucide-react";
+import { Check, X, Mail, Loader2, ChevronRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { addEmails, EmailAccountRequest } from "@/lib/api/emails";
 
@@ -17,6 +17,14 @@ interface EmailEntry {
   validated: boolean;
 }
 
+const steps = [
+  { number: 1, label: "Email Connection" },
+  { number: 2, label: "OAuth Authorization" },
+  { number: 3, label: "User Questions" },
+  { number: 4, label: "Categories" },
+  { number: 5, label: "Processing" },
+];
+
 const EmailConnection = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -24,7 +32,6 @@ const EmailConnection = () => {
   const { toast } = useToast();
   const initializedFromContext = useRef(false);
   
-  // Helper functions need to be defined BEFORE useState
   const validateEmail = (emailAddress: string) => {
     const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return regex.test(emailAddress);
@@ -51,16 +58,12 @@ const EmailConnection = () => {
     return '';
   };
   
-  // Initialize single email from URL params or context
   const [email, setEmail] = useState<EmailEntry>(() => {
-    // FIRST: Check URL params (from OAuth callback)
     const emailFromUrl = searchParams.get('email');
     if (emailFromUrl) {
       const decoded = decodeURIComponent(emailFromUrl);
       const isValid = validateEmail(decoded);
       const provider = isValid ? detectProvider(decoded) : '';
-      
-      console.log('Email from URL:', decoded, 'Provider:', provider); // Debug log
       
       return {
         address: decoded,
@@ -70,7 +73,6 @@ const EmailConnection = () => {
       };
     }
     
-    // SECOND: Check context (from previous navigation)
     if (emailAccounts && emailAccounts.length > 0) {
       const firstAccount = emailAccounts[0];
       return {
@@ -81,13 +83,11 @@ const EmailConnection = () => {
       };
     }
     
-    // DEFAULT: Empty state
     return { address: '', provider: '', type: '', validated: false };
   });
   
   const [isLoading, setIsLoading] = useState(false);
 
-  // Update email when context changes (e.g., when navigating from OAuth)
   useEffect(() => {
     if (emailAccounts && emailAccounts.length > 0 && !initializedFromContext.current) {
       const firstAccount = emailAccounts[0];
@@ -181,46 +181,57 @@ const EmailConnection = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
-      <div className="w-full max-w-2xl mb-8">
-        <div className="flex items-center justify-center gap-2">
-          <div className="w-3 h-3 rounded-full bg-primary"></div>
-          <div className="w-3 h-3 rounded-full bg-muted"></div>
-          <div className="w-3 h-3 rounded-full bg-muted"></div>
-          <div className="w-3 h-3 rounded-full bg-muted"></div>
-          <div className="w-3 h-3 rounded-full bg-muted"></div>
-        </div>
-        <p className="text-center text-sm text-muted-foreground mt-2">Step 1 of 5</p>
-      </div>
-
-      <Card className="w-full max-w-2xl p-8 shadow-card-hover">
-        <div className="flex justify-center mb-6">
-          <div className="p-3 bg-gradient-primary rounded-xl">
-            <Mail className="h-8 w-8 text-primary-foreground" />
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <Card className="w-full max-w-3xl bg-card shadow-card-hover rounded-xl overflow-hidden border-border">
+        {/* Progress Breadcrumb */}
+        <div className="bg-secondary/50 px-8 py-6 border-b border-border">
+          <div className="flex items-center justify-between max-w-2xl mx-auto">
+            {steps.map((step, index) => (
+              <div key={step.number} className="flex items-center">
+                <div className="flex flex-col items-center">
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold transition-all ${
+                    step.number === 1 
+                      ? 'bg-primary text-primary-foreground shadow-glow' 
+                      : 'bg-muted text-muted-foreground'
+                  }`}>
+                    {step.number}
+                  </div>
+                  <span className={`text-xs mt-2 font-medium ${
+                    step.number === 1 ? 'text-primary' : 'text-muted-foreground'
+                  }`}>
+                    {step.label}
+                  </span>
+                </div>
+                {index < steps.length - 1 && (
+                  <ChevronRight className="h-5 w-5 text-muted-foreground mx-2 mb-6" />
+                )}
+              </div>
+            ))}
           </div>
         </div>
 
-        <h1 className="text-3xl font-bold text-center mb-2">Connect Your Email Account</h1>
-        <p className="text-muted-foreground text-center mb-8">
-          Add your primary email account that you want Ex AI to manage
-        </p>
+        {/* Content */}
+        <div className="p-8">
+          <div className="text-center mb-8">
+            <h1 className="text-3xl font-bold text-foreground mb-2">Connect Your Email Account</h1>
+            <p className="text-muted-foreground">
+              Add your primary email account that you want Nyx to manage
+            </p>
+          </div>
 
-        <div className="space-y-6">
-          <Card className="p-6 border-2">
-            <h3 className="font-semibold mb-4">Email Account</h3>
-
+          <div className="space-y-6 max-w-xl mx-auto">
             <div className="space-y-4">
               <div className="relative">
-                <Label className="mb-2 block">Email Address:</Label>
+                <Label className="mb-2 block text-sm font-medium text-foreground">Email Address</Label>
                 <Input
                   type="email"
                   placeholder="Enter your email address"
                   value={email.address}
                   onChange={(e) => handleEmailChange(e.target.value)}
-                  className="pr-10"
+                  className="pr-10 h-12 bg-background border-border"
                 />
                 {email.address && (
-                  <div className="absolute right-3 top-[38px] -translate-y-1/2">
+                  <div className="absolute right-3 top-[42px]">
                     {email.validated ? (
                       <Check className="h-5 w-5 text-success" />
                     ) : (
@@ -236,69 +247,81 @@ const EmailConnection = () => {
               </div>
 
               <div>
-                <Label className="mb-2 block">Provider:</Label>
+                <Label className="mb-3 block text-sm font-medium text-foreground">Provider</Label>
                 <RadioGroup
                   value={email.provider}
                   onValueChange={handleProviderChange}
-                  className="flex gap-4"
+                  className="grid grid-cols-3 gap-3"
                 >
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="google" id="google" />
-                    <Label htmlFor="google" className="cursor-pointer">Google</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="microsoft" id="microsoft" />
-                    <Label htmlFor="microsoft" className="cursor-pointer">Microsoft</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="zoho" id="zoho" />
-                    <Label htmlFor="zoho" className="cursor-pointer">Zoho</Label>
-                  </div>
+                  {['google', 'microsoft', 'zoho'].map((provider) => (
+                    <div key={provider}>
+                      <RadioGroupItem 
+                        value={provider} 
+                        id={provider} 
+                        className="peer sr-only" 
+                      />
+                      <Label
+                        htmlFor={provider}
+                        className="flex items-center justify-center p-4 border-2 border-border rounded-lg cursor-pointer transition-all peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/10 hover:border-primary/50"
+                      >
+                        <span className="font-medium capitalize">{provider}</span>
+                      </Label>
+                    </div>
+                  ))}
                 </RadioGroup>
               </div>
 
               <div>
-                <Label className="mb-2 block">Email Type:</Label>
+                <Label className="mb-3 block text-sm font-medium text-foreground">Email Type</Label>
                 <RadioGroup
                   value={email.type}
                   onValueChange={handleTypeChange}
-                  className="flex gap-4"
+                  className="grid grid-cols-2 gap-3"
                 >
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="work" id="work" />
-                    <Label htmlFor="work" className="cursor-pointer">Work</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="personal" id="personal" />
-                    <Label htmlFor="personal" className="cursor-pointer">Personal</Label>
-                  </div>
+                  {['work', 'personal'].map((type) => (
+                    <div key={type}>
+                      <RadioGroupItem 
+                        value={type} 
+                        id={type} 
+                        className="peer sr-only" 
+                      />
+                      <Label
+                        htmlFor={type}
+                        className="flex items-center justify-center p-4 border-2 border-border rounded-lg cursor-pointer transition-all peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/10 hover:border-primary/50"
+                      >
+                        <span className="font-medium capitalize">{type}</span>
+                      </Label>
+                    </div>
+                  ))}
                 </RadioGroup>
               </div>
             </div>
-          </Card>
-        </div>
+          </div>
 
-        <div className="flex items-center justify-between mt-8">
-          <Button
-            variant="ghost"
-            onClick={() => navigate('/signup')}
-          >
-            Back
-          </Button>
-          <Button
-            onClick={handleContinue}
-            disabled={!canContinue || isLoading}
-            className="min-w-32"
-          >
-            {isLoading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Saving...
-              </>
-            ) : (
-              'Continue'
-            )}
-          </Button>
+          {/* Footer */}
+          <div className="flex items-center justify-between mt-10 pt-6 border-t border-border">
+            <Button
+              variant="ghost"
+              onClick={() => navigate('/signup')}
+              className="text-muted-foreground hover:text-foreground"
+            >
+              Back
+            </Button>
+            <Button
+              onClick={handleContinue}
+              disabled={!canContinue || isLoading}
+              className="bg-primary hover:bg-primary-dark text-primary-foreground px-8 h-11"
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                'Continue'
+              )}
+            </Button>
+          </div>
         </div>
       </Card>
     </div>
