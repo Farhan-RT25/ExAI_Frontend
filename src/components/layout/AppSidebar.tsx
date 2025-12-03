@@ -1,4 +1,5 @@
 import { MdDashboard, MdCategory, MdEdit, MdVideoLibrary, MdLink, MdSettings, MdLogout, MdMail, MdLightMode, MdDarkMode } from "react-icons/md";
+import { Bot } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -21,7 +22,8 @@ const menuItems = [
   { title: "Dashboard", url: "/dashboard", icon: MdDashboard },
   { title: "Categorization", url: "/dashboard/categorization", icon: MdCategory },
   { title: "Drafts", url: "/dashboard/drafts", icon: MdEdit },
-  { title: "Meetings", url: "/dashboard/meetings", icon: MdVideoLibrary, badge: "Coming Soon" },
+  { title: "Meetings", url: "/dashboard/meetings", icon: MdVideoLibrary },
+  { title: "AI Assistant", url: "/dashboard/ai-assistant", icon: Bot, isLucide: true },
   { title: "Connections", url: "/dashboard/connections", icon: MdLink },
 ];
 
@@ -33,7 +35,6 @@ export function AppSidebar() {
   const { toast } = useToast();
   const [isDarkMode, setIsDarkMode] = useState(true);
 
-  // Initialize theme from localStorage or default to dark
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme');
     const isDark = savedTheme !== 'light';
@@ -131,15 +132,14 @@ export function AppSidebar() {
                           ? "bg-primary/10 text-primary font-semibold hover:bg-primary/15 border border-primary rounded-md"
                           : "text-foreground hover:bg-primary/10 hover:text-primary rounded-md"
                         }`}>
-                          <item.icon className={`h-4 w-4 flex-shrink-0 ${isActive ? 'fill-current' : ''}`} />
+                          {item.isLucide ? (
+                            <item.icon className={`h-4 w-4 flex-shrink-0 ${isActive ? '' : ''}`} />
+                          ) : (
+                            <item.icon className={`h-4 w-4 flex-shrink-0 ${isActive ? 'fill-current' : ''}`} />
+                          )}
                           {!isCollapsed && (
                             <span className="flex items-center justify-between flex-1">
                               {item.title}
-                              {item.badge && (
-                                <Badge variant="secondary" className="text-xs ml-2">
-                                  {item.badge}
-                                </Badge>
-                              )}
                             </span>
                           )}
                         </div>
