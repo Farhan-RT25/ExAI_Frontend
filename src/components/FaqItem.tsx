@@ -17,10 +17,10 @@ const FaqItem = ({ item, index }: FaqItemProps) => {
 
   return (
     <div 
-      className={`rounded-2xl overflow-hidden transition-all duration-300 ${
+      className={`overflow-hidden transition-all duration-300 ${
         isOpen 
           ? 'bg-primary/10 border-2 border-primary shadow-lg' 
-          : 'bg-card border-2 border-border'
+          : 'bg-muted/10 border-b border-border hover:bg-muted/20 hover:shadow-sm'
       }`}
     >
       {/* Question Header - Clickable */}
@@ -29,12 +29,12 @@ const FaqItem = ({ item, index }: FaqItemProps) => {
         onClick={() => setIsOpen(!isOpen)}
         aria-expanded={isOpen}
       >
-        <div className="flex-1">
-          <div className={`text-sm font-bold mb-3 transition-colors duration-300 ${
+        <div className="flex">
+          {/* <div className={`text-sm font-bold mb-3 transition-colors duration-300 ${
             isOpen ? 'text-primary' : 'text-muted-foreground'
           }`}>
             {String(index + 1).padStart(2, '0')}
-          </div>
+          </div> */}
           <h3 className={`text-xl font-bold transition-colors duration-300 ${
             isOpen ? 'text-foreground' : 'text-foreground'
           }`}>
@@ -43,10 +43,10 @@ const FaqItem = ({ item, index }: FaqItemProps) => {
         </div>
 
         {/* Plus/Minus Icon Button */}
-        <div className={`flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 ${
+        <div className={`flex-shrink-0 w-12 h-12 flex items-center justify-center transition-all duration-300 ${
           isOpen 
-            ? 'bg-primary text-primary-foreground' 
-            : 'bg-primary/20 text-primary hover:bg-primary/30'
+            ? 'bg-none text-primary-foreground' 
+            : 'bg-none text-primary hover:bg-primary/30'
         }`}>
           {isOpen ? (
             <Minus className="w-6 h-6" strokeWidth={3} />

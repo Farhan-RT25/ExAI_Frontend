@@ -7,6 +7,7 @@ import { handleGoogleCallback } from "@/lib/api/google";
 import { handleMicrosoftCallback } from "@/lib/api/microsoft";
 import { handleZohoCallback } from "@/lib/api/zoho";
 import { useOnboarding } from "@/contexts/OnboardingContext";
+import { startRealtimeEmailPolling } from "@/lib/api/onboarding";
 import { Loader2 } from "lucide-react";
 
 const OAuthCallback = () => {
@@ -15,6 +16,7 @@ const OAuthCallback = () => {
   const { toast } = useToast();
   const { setFullName, setEmail, setEmailAccounts } = useOnboarding();
   const [isProcessing, setIsProcessing] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const handleCallback = async () => {
@@ -45,7 +47,9 @@ const OAuthCallback = () => {
           return;
         }
 
-        // Get token from callback handler
+        console.log('Processing OAuth callback for provider:', provider);
+
+        // Get result from appropriate callback handler
         let result;
         switch (provider) {
           case 'google':
@@ -61,19 +65,36 @@ const OAuthCallback = () => {
             result = { error: 'Unknown provider' };
         }
 
+        console.log('Callback result:', result);
+
+        // Handle errors from callback
         if (result.error) {
+          setError(result.error);
+          setIsProcessing(false);
+          
           toast({
             title: "Authentication Failed",
             description: result.error,
             variant: "destructive",
           });
-          navigate('/login');
+
+          setTimeout(() => {
+            if (result.redirect === 'signup') {
+              navigate('/signup', { replace: true });
+            } else {
+              navigate('/login', { replace: true });
+            }
+          }, 3000);
           return;
         }
 
         if (result.token) {
           // Save token first
           localStorage.setItem('access_token', result.token);
+          
+          // Extract redirect path from URL (provided by backend)
+          const params = new URLSearchParams(location.search);
+          const redirectPath = params.get('redirect') || 'dashboard'; // Default to dashboard
           
           // Try to fetch user info from backend
           let user;
@@ -111,54 +132,9 @@ const OAuthCallback = () => {
             user,
           });
 
-          // Log full user object for debugging
-          console.log('Full user object:', JSON.stringify(user, null, 2));
-
-          // Determine if this is a new user (signup) or existing user (login)
-          // Strategy: Default to signup unless we're certain they've completed onboarding
-          let isRecentSignup = false;
-          
-          // First check: Has user completed onboarding before?
-          const onboardingCompleted = localStorage.getItem('onboarding_completed');
-          console.log('Onboarding completed flag:', onboardingCompleted);
-          
-          // SIMPLIFIED LOGIC: If onboarding not completed, always go to onboarding
-          // This ensures new users always go through the flow
-          if (onboardingCompleted === 'true') {
-            // User has completed onboarding, this is definitely a login
-            console.log('User has completed onboarding, treating as login');
-            isRecentSignup = false;
-          } else {
-            // No onboarding completion flag - treat as signup
-            console.log('No onboarding completion flag found - treating as signup');
-            isRecentSignup = true;
-            
-            // Additional validation: Check account age as a safety check
-            // If account is very old (more than 7 days), it might be a returning user
-            // But only if they have multiple OAuth accounts
-            const accountCreatedAt = user.created_at ? new Date(user.created_at) : null;
-            const hasOAuthAccounts = user.oauth_accounts && Array.isArray(user.oauth_accounts) && user.oauth_accounts.length > 0;
-            
-            if (accountCreatedAt && hasOAuthAccounts) {
-              const now = new Date();
-              const daysSinceCreation = (now.getTime() - accountCreatedAt.getTime()) / (1000 * 60 * 60 * 24);
-              
-              console.log(`Account created ${daysSinceCreation.toFixed(2)} days ago`);
-              
-              // Only treat as login if account is older than 7 days AND has multiple OAuth accounts
-              if (daysSinceCreation > 7 && user.oauth_accounts.length > 1) {
-                console.log('Account is older than 7 days with multiple OAuth accounts - treating as login');
-                isRecentSignup = false;
-              } else {
-                console.log('Account age check passed - treating as signup');
-              }
-            }
-          }
-
-          console.log('Final signup determination:', isRecentSignup);
-
-          if (isRecentSignup) {
-            // This is a signup flow - navigate to onboarding
+          // Use backend-provided redirect path
+          if (redirectPath === 'onboarding/email-connection') {
+            // New user - pre-populate onboarding context
             setFullName(user.full_name || '');
             setEmail(user.email || '');
             
@@ -178,46 +154,78 @@ const OAuthCallback = () => {
               title: "Account created!",
               description: `Welcome, ${user.full_name || 'User'}! Let's connect your email accounts`,
             });
+          } else if (redirectPath === 'dashboard') {
+            // Existing user - start realtime polling
+            try {
+              console.log("🚀 Starting realtime email polling for user:", user.user_id);
+              await startRealtimeEmailPolling(user.user_id);
+              console.log("✅ Realtime email polling started successfully");
+            } catch (pollingError: any) {
+              console.warn("⚠️ Failed to start realtime email polling:", pollingError);
+              // Don't block login if polling fails
+            }
             
-            navigate('/onboarding/email-connection');
-          } else {
-            // This is a login flow - go to dashboard
             toast({
               title: "Logged in successfully!",
               description: `Welcome back, ${user.full_name || user.email || 'User'}`,
             });
-            
-            navigate('/dashboard');
           }
+          
+          // Navigate to appropriate page
+          navigate(`/${redirectPath}`, { replace: true });
         } else {
-          throw new Error('No token received');
+          setError('No authentication token received');
+          setIsProcessing(false);
+          setTimeout(() => navigate('/login', { replace: true }), 3000);
         }
+
       } catch (error) {
         console.error('OAuth callback error:', error);
+        
+        setError(error instanceof Error ? error.message : 'Authentication processing failed');
+        setIsProcessing(false);
+        
         toast({
           title: "Authentication Error",
           description: error instanceof Error ? error.message : "Failed to complete authentication",
           variant: "destructive",
         });
-        navigate('/login');
-      } finally {
-        setIsProcessing(false);
+        
+        setTimeout(() => navigate('/login', { replace: true }), 3000);
       }
     };
 
     handleCallback();
   }, [location, navigate, toast, setFullName, setEmail, setEmailAccounts]);
 
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
-      <div className="text-center">
-        <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
-        <p className="text-muted-foreground">
-          {isProcessing ? "Completing authentication..." : "Redirecting..."}
-        </p>
+  if (isProcessing) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
+          <p className="text-muted-foreground">
+            Processing your authentication...
+          </p>
+        </div>
       </div>
-    </div>
-  );
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center max-w-md mx-auto p-6">
+          <div className="bg-destructive/10 border border-destructive/20 text-destructive px-4 py-6 rounded-lg">
+            <h2 className="font-bold text-lg mb-2">Authentication Error</h2>
+            <p className="mb-4">{error}</p>
+            <p className="text-sm opacity-75">Redirecting you back...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return null;
 };
 
 export default OAuthCallback;

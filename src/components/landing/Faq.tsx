@@ -6,7 +6,7 @@ const Faq = () => {
   const halfLength = Math.floor(faq.length / 2);
 
   return (
-    <section id="faq" className="relative py-20 md:py-32 bg-background">
+    <section id="faq" className="relative py-20 md:py-32 bg-transparent">
       {/* Background decoration */}
       <div className="absolute inset-0 bg-gradient-to-b from-card/30 to-background" />
       

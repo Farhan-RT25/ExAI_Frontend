@@ -325,7 +325,7 @@ async def poll_emails_for_user(user_id: int):
                 is_categories_agree = category_task.result_data.get("is_categories_agree", False)
                 
                 print(f"📋 User has {len(selected_categories)} categories")
-                print(f"🔐 Category consent: {'YES - Apply to email platform' if is_categories_agree else 'NO - Only EX AI frontend'}")
+                print(f"🔐 Category consent: {'YES - Apply to email platform' if is_categories_agree else 'NO - Only Nyx AI frontend'}")
                 
                 found_any_new = False
                 
@@ -805,7 +805,7 @@ async def process_new_emails(
             
             print(f"📝 Processing: {parsed_email['subject'][:50]}...")
             
-            # Categorize (ALWAYS do this for EX AI)
+            # Categorize (ALWAYS do this for Nyx AI)
             category_id = await categorize_single_email(parsed_email, user_categories)
             print(f"🏷️ Category: {category_id} ({category_names.get(category_id)})")
             
@@ -876,7 +876,7 @@ async def process_new_emails(
                     "note": (
                         "Categorized and labeled in email platform" 
                         if is_categories_agree and label_applied 
-                        else "Categorized for EX AI only (not applied to email platform)"
+                        else "Categorized for Nyx AI only (not applied to email platform)"
                     )
                 }
             }

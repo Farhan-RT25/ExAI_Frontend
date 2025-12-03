@@ -12,55 +12,25 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { getProfile, getAccessToken, type User } from "@/lib/api/auth";
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend, CartesianGrid } from 'recharts';
+import { 
+  getDashboardData, 
+  getDashboardAccounts,
+  type EmailAccountInfo,
+  type KPIMetric,
+  type VolumeDataPoint,
+  type CategoryDataPoint,
+  type ProcessingTimeDataPoint,
+  type AIInsight
+} from "@/lib/api/dashboard";
 
-const emailAccounts = [
-  { id: "all", name: "All Accounts", email: "", color: "bg-gradient-primary" },
-  { id: "work", name: "Work", email: "kristin.watson@company.com", color: "bg-[#009773]" },
-  { id: "personal", name: "Personal", email: "kristin.w@gmail.com", color: "bg-primary" },
-  { id: "business", name: "Business", email: "kw@mybusiness.com", color: "bg-[#4a4453]" },
-];
-
-const accountData = {
-  all: {
-    kpi: [
-      { title: "Total Emails", value: 21300, change: "40%", trend: "up", icon: Mail, color: "#009773" },
-      { title: "Requiring Response", value: 87, change: "20%", trend: "up", icon: Clock, color: "#f59e0b" },
-      { title: "Response Rate", value: 94, change: "15%", trend: "up", icon: CheckCircle2, suffix: "%", color: "#ef4444" },
-      { title: "Avg Response Time", value: 2.4, change: "30%", trend: "down", icon: TrendingUp, suffix: "h", color: "#3b82f6" },
-    ],
-    volumeData: [
-      { month: 'Jan', emails: 1200, responded: 980 },
-      { month: 'Feb', emails: 1400, responded: 1150 },
-      { month: 'Mar', emails: 1100, responded: 920 },
-      { month: 'Apr', emails: 1600, responded: 1350 },
-      { month: 'May', emails: 1450, responded: 1200 },
-      { month: 'Jun', emails: 1800, responded: 1550 },
-      { month: 'Jul', emails: 1650, responded: 1420 },
-      { month: 'Aug', emails: 1900, responded: 1680 },
-      { month: 'Sep', emails: 1750, responded: 1520 },
-      { month: 'Oct', emails: 2000, responded: 1800 },
-      { month: 'Nov', emails: 1850, responded: 1650 },
-      { month: 'Dec', emails: 2100, responded: 1900 },
-    ],
-    categoryData: [
-      { name: 'To Respond', value: 145, color: '#a78bfa' },
-      { name: 'Admin', value: 89, color: '#009773' },
-      { name: 'Sales', value: 67, color: '#4a4453' },
-      { name: 'Marketing', value: 45, color: '#f59e0b' },
-      { name: 'HR', value: 23, color: '#ef4444' },
-    ],
-    spendingData: [
-      { category: 'Drafting', amount: 320, color: '#a78bfa' },
-      { category: 'Categories', amount: 180, color: '#009773' },
-      { category: 'Reply', amount: 240, color: '#4a4453' },
-      { category: 'Misc', amount: 140, color: '#f59e0b' },
-    ],
-    aiInsights: [
-      { text: "Your email response rate has increased by 5% since last month", trend: "up" },
-      { text: "Peak email time is between 9 AM - 11 AM", trend: "neutral" },
-      { text: "Average response time improved by 12 minutes", trend: "up" },
-    ],
-  },
+// Icon mapping for KPI metrics
+const iconMap: Record<string, any> = {
+  Mail,
+  Clock,
+  CheckCircle2,
+  TrendingUp,
+  MessageSquare,
+  HelpCircle
 };
 
 // Counter animation component
@@ -103,9 +73,50 @@ const DashboardHome = () => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Dashboard data state
+  const [emailAccounts, setEmailAccounts] = useState<EmailAccountInfo[]>([
+    { id: "all", name: "All Accounts", email: "", color: "bg-gradient-primary" }
+  ]);
+  const [kpi, setKpi] = useState<KPIMetric[]>([]);
+  const [volumeData, setVolumeData] = useState<VolumeDataPoint[]>([]);
+  const [categoryData, setCategoryData] = useState<CategoryDataPoint[]>([]);
+  const [spendingData, setSpendingData] = useState<ProcessingTimeDataPoint[]>([]);
+  const [aiInsights, setAiInsights] = useState<AIInsight[]>([]);
+  const [mainInsight, setMainInsight] = useState<string>("");
 
   const currentAccount = emailAccounts.find(acc => acc.id === selectedAccount);
-  const currentData = accountData[selectedAccount];
+
+  // Fetch dashboard data
+  const fetchDashboardData = async (accountId?: string) => {
+    try {
+      setError(null);
+      console.log("Fetching dashboard data for account:", accountId || "all");
+      
+      // Fetch all dashboard data
+      const data = await getDashboardData(accountId);
+      
+      console.log("Dashboard data received:", data);
+      
+      setEmailAccounts(data.accounts);
+      setKpi(data.kpi);
+      setVolumeData(data.volumeData);
+      setCategoryData(data.categoryData);
+      setSpendingData(data.spendingData);
+      setAiInsights(data.aiInsights);
+      setMainInsight(data.mainInsight || "");
+      
+    } catch (err) {
+      console.error("Failed to fetch dashboard data:", err);
+      const errorMessage = err instanceof Error ? err.message : "Failed to load dashboard data";
+      setError(errorMessage);
+      
+      // Set default/empty data to prevent UI errors
+      if (emailAccounts.length === 0) {
+        setEmailAccounts([{ id: "all", name: "All Accounts", email: "", color: "bg-gradient-primary" }]);
+      }
+    }
+  };
 
   useEffect(() => {
     const fetchUserProfile = async () => {
@@ -120,6 +131,9 @@ const DashboardHome = () => {
 
         const profile = await getProfile(token);
         setUser(profile);
+        
+        // Fetch dashboard data after profile is loaded
+        await fetchDashboardData();
       } catch (err) {
         console.error("Failed to fetch user profile:", err);
         setError(err instanceof Error ? err.message : "Failed to load profile");
@@ -129,6 +143,8 @@ const DashboardHome = () => {
           try {
             setUser(JSON.parse(storedUser));
             setError(null);
+            // Still try to fetch dashboard data
+            await fetchDashboardData();
           } catch {
             // Ignore parse error
           }
@@ -140,6 +156,14 @@ const DashboardHome = () => {
 
     fetchUserProfile();
   }, []);
+
+  // Refetch data when account changes
+  useEffect(() => {
+    if (!loading) {
+      const accountId = selectedAccount === "all" ? undefined : selectedAccount;
+      fetchDashboardData(accountId);
+    }
+  }, [selectedAccount]);
 
   const getFirstName = () => {
     if (!user) return "there";
@@ -155,6 +179,27 @@ const DashboardHome = () => {
     
     return "there";
   };
+
+  // Show error message if API is not configured
+  if (error && error.includes("API base URL is not configured")) {
+    return (
+      <div className="space-y-6">
+        <div className="bg-destructive/10 border border-destructive/20 text-destructive px-6 py-8 rounded-lg">
+          <h2 className="font-bold text-lg mb-2">Configuration Error</h2>
+          <p className="mb-4">{error}</p>
+          <p className="text-sm opacity-75">
+            Please create a <code className="bg-muted px-2 py-1 rounded">.env</code> file in the New_UI folder with:
+          </p>
+          <pre className="mt-2 bg-muted p-4 rounded text-sm overflow-x-auto">
+            VITE_API_BASE=http://localhost:8000
+          </pre>
+          <p className="text-sm opacity-75 mt-4">
+            Replace <code className="bg-muted px-2 py-1 rounded">http://localhost:8000</code> with your actual backend API URL.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -205,58 +250,64 @@ const DashboardHome = () => {
       </div>
 
       {/* KPI Cards - Medical Dashboard Style */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {currentData.kpi.map((kpi, index) => {
-          const Icon = kpi.icon;
-          
-          return (
-            <Card 
-              key={index} 
-              className="relative overflow-hidden border-l-[6px] transition-all duration-700 group cursor-pointer bg-card"
-              style={{ borderLeftColor: kpi.color }}
-            >
-              {/* Wave animation background */}
-              <div 
-                className="absolute bottom-0 right-0 w-full h-[40%] rounded-full transition-all duration-700 ease-in-out group-hover:scale-[7] group-hover:translate-x-[-20px]"
-                style={{ 
-                  backgroundColor: kpi.color,
-                  transform: 'translateY(70px)',
-                }}
-              />
-              
-              <CardHeader className="flex flex-row items-start justify-between pb-2 pt-5 px-5 relative z-10">
-                <div className="flex-1">
-                  <CardTitle className="text-sm font-medium text-muted-foreground mb-3 transition-colors duration-700">
-                    {kpi.title}
-                  </CardTitle>
-                  <div className="text-3xl font-bold tracking-tight mb-2 transition-colors duration-700">
-                    <AnimatedCounter value={kpi.value} suffix={kpi.suffix || ""} />
-                  </div>
-                  {kpi.change && (
-                    <div className="flex items-center gap-1">
-                      {kpi.trend === "up" ? (
-                        <ArrowUp className="h-3 w-3 transition-colors duration-700" style={{ color: kpi.color }} />
-                      ) : (
-                        <ArrowDown className="h-3 w-3 transition-colors duration-700" style={{ color: kpi.color }} />
-                      )}
-                      <span className="text-xs font-medium transition-colors duration-700" style={{ color: kpi.color }}>
-                        {kpi.change}
-                      </span>
-                      <span className="text-xs text-muted-foreground transition-colors duration-700">vs last month</span>
-                    </div>
-                  )}
-                </div>
+      {kpi.length > 0 ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {kpi.map((kpiItem, index) => {
+            const Icon = iconMap[kpiItem.icon] || Mail;
+            
+            return (
+              <Card 
+                key={index} 
+                className="relative overflow-hidden border-l-[6px] transition-all duration-700 group cursor-pointer bg-card"
+                style={{ borderLeftColor: kpiItem.color }}
+              >
+                {/* Wave animation background */}
                 <div 
-                  className="p-3 rounded-xl transition-all duration-700"
-                  style={{ backgroundColor: kpi.color }}
-                >
-                  <Icon className="h-5 w-5 text-white transition-all duration-700" />
-                </div>
-              </CardHeader>
-            </Card>
-          );
-        })}
-      </div>
+                  className="absolute bottom-0 right-0 w-full h-[40%] rounded-full transition-all duration-700 ease-in-out group-hover:scale-[7] group-hover:translate-x-[-20px]"
+                  style={{ 
+                    backgroundColor: kpiItem.color,
+                    transform: 'translateY(70px)',
+                  }}
+                />
+                
+                <CardHeader className="flex flex-row items-start justify-between pb-2 pt-5 px-5 relative z-10">
+                  <div className="flex-1">
+                    <CardTitle className="text-sm font-medium text-muted-foreground mb-3 transition-colors duration-700">
+                      {kpiItem.title}
+                    </CardTitle>
+                    <div className="text-3xl font-bold tracking-tight mb-2 transition-colors duration-700">
+                      <AnimatedCounter value={kpiItem.value} suffix={kpiItem.suffix || ""} />
+                    </div>
+                    {kpiItem.change && (
+                      <div className="flex items-center gap-1">
+                        {kpiItem.trend === "up" ? (
+                          <ArrowUp className="h-3 w-3 transition-colors duration-700" style={{ color: kpiItem.color }} />
+                        ) : (
+                          <ArrowDown className="h-3 w-3 transition-colors duration-700" style={{ color: kpiItem.color }} />
+                        )}
+                        <span className="text-xs font-medium transition-colors duration-700" style={{ color: kpiItem.color }}>
+                          {kpiItem.change}
+                        </span>
+                        <span className="text-xs text-muted-foreground transition-colors duration-700">vs last month</span>
+                      </div>
+                    )}
+                  </div>
+                  <div 
+                    className="p-3 rounded-xl transition-all duration-700"
+                    style={{ backgroundColor: kpiItem.color }}
+                  >
+                    <Icon className="h-5 w-5 text-white transition-all duration-700" />
+                  </div>
+                </CardHeader>
+              </Card>
+            );
+          })}
+        </div>
+      ) : !loading && (
+        <div className="text-center py-8 text-muted-foreground">
+          {/* <p>No data available. Please check your connection and try again.</p> */}
+        </div>
+      )}
 
       {/* Main Charts Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -276,20 +327,22 @@ const DashboardHome = () => {
           </CardHeader>
           <CardContent className="px-6 pb-6 relative z-10">
             {/* Main insight with glow effect */}
-            <div className="mb-6 p-6 rounded-2xl bg-gradient-to-br from-primary/10 to-[#009773]/10 border border-primary/20 relative">
-              <div className="absolute top-4 right-4">
-                <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+            {mainInsight && (
+              <div className="mb-6 p-6 rounded-2xl bg-gradient-to-br from-primary/10 to-[#009773]/10 border border-primary/20 relative">
+                <div className="absolute top-4 right-4">
+                  <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+                </div>
+                <p className="text-sm text-muted-foreground mb-2">Your Email Volume</p>
+                <h3 className="text-2xl font-bold mb-2">  
+                  {mainInsight}
+                </h3>
+                <p className="text-sm text-muted-foreground">Since last Month</p>
               </div>
-              <p className="text-sm text-muted-foreground mb-2">Your Email Volume</p>
-              <h3 className="text-2xl font-bold mb-2">  
-                has increased by 5%
-              </h3>
-              <p className="text-sm text-muted-foreground">Since last Month</p>
-            </div>
+            )}
 
             {/* Additional insights */}
             <div className="space-y-3">
-              {currentData.aiInsights.map((insight, index) => (
+              {aiInsights.map((insight, index) => (
                 <div 
                   key={index}
                   className="flex items-start gap-3 p-3 rounded-lg bg-secondary/50 hover:bg-secondary transition-colors"
@@ -312,7 +365,7 @@ const DashboardHome = () => {
         <Card className="border-2 hover:border-primary/50 transition-all shadow-card">
           <CardHeader className="pb-4 pt-6 px-6">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-lg font-semibold">Email Volume Trend</CardTitle>
+              <CardTitle className="text-lg font-semibold">Email Volume Trend (Last 30 Days)</CardTitle>
               <div className="flex items-center gap-4 text-xs">
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded-full bg-primary" />
@@ -326,8 +379,9 @@ const DashboardHome = () => {
             </div>
           </CardHeader>
           <CardContent className="px-6 pb-6">
-            <ResponsiveContainer width="100%" height={250}>
-              <LineChart data={currentData.volumeData}>
+            {volumeData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={250}>
+                <LineChart data={volumeData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
                 <XAxis 
                   dataKey="month" 
@@ -366,6 +420,11 @@ const DashboardHome = () => {
                 />
               </LineChart>
             </ResponsiveContainer>
+            ) : (
+              <div className="h-[250px] flex items-center justify-center text-muted-foreground">
+                <p>No email data available yet</p>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -375,24 +434,25 @@ const DashboardHome = () => {
         {/* Category Distribution Pie Chart */}
         <Card className="border-2 hover:border-primary/50 transition-all shadow-card">
           <CardHeader className="pb-4 pt-6 px-6">
-            <CardTitle className="text-lg font-semibold">Category Distribution</CardTitle>
+            <CardTitle className="text-lg font-semibold">Category Distribution (Real-time)</CardTitle>
           </CardHeader>
           <CardContent className="px-6 pb-6">
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={currentData.categoryData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={70}
-                  outerRadius={100}
-                  paddingAngle={3}
-                  dataKey="value"
-                >
-                  {currentData.categoryData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
+            {categoryData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={300}>
+                <PieChart>
+                  <Pie
+                    data={categoryData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={70}
+                    outerRadius={100}
+                    paddingAngle={3}
+                    dataKey="value"
+                  >
+                    {categoryData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
                 <Tooltip 
                   contentStyle={{
                     backgroundColor: 'hsl(var(--card))',
@@ -403,29 +463,37 @@ const DashboardHome = () => {
                 />
               </PieChart>
             </ResponsiveContainer>
-            <div className="grid grid-cols-2 gap-3 mt-4">
-              {currentData.categoryData.map((cat, index) => (
-                <div key={index} className="flex items-center gap-2">
-                  <div 
-                    className="w-3 h-3 rounded-full" 
-                    style={{ backgroundColor: cat.color }}
-                  />
-                  <span className="text-xs text-muted-foreground">{cat.name}</span>
-                  <span className="text-xs font-semibold ml-auto">{cat.value}</span>
-                </div>
-              ))}
-            </div>
+            ) : (
+              <div className="h-[300px] flex items-center justify-center text-muted-foreground">
+                <p>No categories selected yet. Complete onboarding to see category distribution.</p>
+              </div>
+            )}
+            {categoryData.length > 0 && (
+              <div className="grid grid-cols-2 gap-3 mt-4">
+                {categoryData.map((cat, index) => (
+                  <div key={index} className="flex items-center gap-2">
+                    <div 
+                      className="w-3 h-3 rounded-full" 
+                      style={{ backgroundColor: cat.color }}
+                    />
+                    <span className="text-xs text-muted-foreground">{cat.name}</span>
+                    <span className="text-xs font-semibold ml-auto">{cat.value}</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
 
-        {/* Spending Bar Chart */}
+        {/* Processing Time Bar Chart */}
         <Card className="border-2 hover:border-primary/50 transition-all shadow-card">
           <CardHeader className="pb-4 pt-6 px-6">
-            <CardTitle className="text-lg font-semibold">Processing Time</CardTitle>
+            <CardTitle className="text-lg font-semibold">Processing Time (Real-time)</CardTitle>
           </CardHeader>
           <CardContent className="px-6 pb-6">
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={currentData.spendingData}>
+            {spendingData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={spendingData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
                 <XAxis 
                   dataKey="category" 
@@ -450,12 +518,17 @@ const DashboardHome = () => {
                   dataKey="amount" 
                   radius={[8, 8, 0, 0]}
                 >
-                  {currentData.spendingData.map((entry, index) => (
+                  {spendingData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
+            ) : (
+              <div className="h-[300px] flex items-center justify-center text-muted-foreground">
+                <p>No processing data available yet</p>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

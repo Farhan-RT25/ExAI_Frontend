@@ -5,7 +5,7 @@ const testimonials = [
   {
     name: "Sarah Johnson",
     role: "CEO, TechStart Inc",
-    content: "Ex AI has saved me at least 2 hours every day. The AI draft replies are incredibly accurate and match my communication style perfectly.",
+    content: "Nyx AI has saved me at least 2 hours every day. The AI draft replies are incredibly accurate and match my communication style perfectly.",
     avatar: "SJ",
   },
   {
@@ -17,7 +17,7 @@ const testimonials = [
   {
     name: "Emily Rodriguez",
     role: "VP of Operations, Global Solutions",
-    content: "I was skeptical at first, but Ex AI has transformed how I manage my inbox. The time savings and reduced stress are invaluable.",
+    content: "I was skeptical at first, but Nyx AI has transformed how I manage my inbox. The time savings and reduced stress are invaluable.",
     avatar: "ER",
   },
 ];
@@ -32,7 +32,7 @@ export const Testimonials = () => {
             Trusted by Professionals Worldwide
           </h2>
           <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
-            See what busy executives are saying about Ex AI
+            See what busy executives are saying about Nyx AI
           </p>
         </div>
 

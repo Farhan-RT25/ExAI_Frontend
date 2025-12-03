@@ -32,7 +32,7 @@ export const Navbar1 = () => {
                   scrolled ? "text-gray-900" : "text-white"
                 }`}
               >
-                Ex AI.
+                Nyx AI.
               </span>
             </a>
 

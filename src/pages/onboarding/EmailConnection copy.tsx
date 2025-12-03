@@ -202,7 +202,7 @@ const EmailConnection = () => {
 
         <h1 className="text-3xl font-bold text-center mb-2">Connect Your Email Account</h1>
         <p className="text-muted-foreground text-center mb-8">
-          Add your primary email account that you want Ex AI to manage
+          Add your primary email account that you want Nyx AI to manage
         </p>
 
         <div className="space-y-6">

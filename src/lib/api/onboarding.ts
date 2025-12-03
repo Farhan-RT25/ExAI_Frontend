@@ -221,6 +221,40 @@ export const organizeSpecificEmail = async (
 };
 
 // =====================================================
+// REALTIME EMAIL POLLING
+// =====================================================
+
+/**
+ * Start realtime email polling for a user
+ * This enables automatic email categorization and notifications
+ */
+export const startRealtimeEmailPolling = async (
+  userId: number
+): Promise<any> => {
+  const token = getAccessToken();
+  if (!token) throw new Error("Not authenticated. Please login again.");
+  if (!API_BASE) throw new Error("API base URL is not configured");
+
+  const response = await fetch(`${API_BASE}/api/realtime-email/start-polling/${userId}`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+      "ngrok-skip-browser-warning": "true",
+    },
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ 
+      detail: "Failed to start realtime email polling" 
+    }));
+    throw new Error(error.detail || error.message || "Failed to start realtime email polling");
+  }
+
+  return response.json();
+};
+
+// =====================================================
 // ONBOARDING TASK MANAGEMENT
 // =====================================================
 

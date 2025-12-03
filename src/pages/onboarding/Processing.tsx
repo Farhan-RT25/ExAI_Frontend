@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Loader2, Check, AlertCircle, ChevronRight, Sparkles } from "lucide-react";
 import { Card } from "@/components/ui/card";
-import { organizeAllEmails } from "@/lib/api/onboarding";
+import { organizeAllEmails, startRealtimeEmailPolling } from "@/lib/api/onboarding";
 
 const steps = [
   'Analyzing your email patterns',
@@ -81,6 +81,16 @@ const Processing = () => {
       
       console.log("✅ Email organization completed:", result);
       setOrganizationResult(result);
+
+      // Start realtime email polling after organization completes
+      try {
+        console.log("🚀 Starting realtime email polling for user:", userId);
+        await startRealtimeEmailPolling(userId);
+        console.log("✅ Realtime email polling started successfully");
+      } catch (pollingError: any) {
+        console.warn("⚠️ Failed to start realtime email polling:", pollingError);
+        // Don't block onboarding completion if polling fails
+      }
 
       if (progress >= 100) {
         setComplete(true);

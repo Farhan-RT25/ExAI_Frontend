@@ -12,7 +12,7 @@ export const Footer = () => {
               <div className="w-8 h-8 bg-gradient-primary rounded-lg flex items-center justify-center transition-transform group-hover:scale-110">
                 <Mail className="h-4 w-4 text-white" />
               </div>
-              <span className="text-xl font-semibold text-white">Ex AI</span>
+              <span className="text-xl font-semibold text-white">Nyx AI</span>
             </Link>
             <p className="text-sm text-gray-400 mb-6 max-w-xs">
               Crafting intelligent, user-first digital experiences — combining design, data, and technology to help businesses grow
@@ -92,7 +92,7 @@ export const Footer = () => {
         {/* Bottom bar */}
         <div className="border-t border-gray-800 pt-2 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-sm text-gray-400">
-            © 2025 Ex AI. Designed by <span className="text-white">R A M A Technologies</span>
+            © 2025 Nyx AI. Designed by <span className="text-white">R A M A Technologies</span>
           </p>
           <div className="flex items-center gap-6">
             <Link to="/privacy" className="text-sm hover:text-white transition-colors">

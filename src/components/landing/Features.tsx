@@ -75,10 +75,10 @@ const Features = () => {
                   }`}
                 >
                   {/* Icon Circle */}
-                  <div className="flex items-center justify-center mb-4 border-2 border-primary/30 rounded-full hover:border-primary hover:shadow-lg transition-all duration-300 w-16 h-16 md:w-14 md:h-14 bg-background group cursor-pointer hover:scale-110">
+                  <div className="flex items-center justify-center mb-4 border-2 border-white/30 rounded-full hover:shadow-lg transition-all duration-300 w-16 h-16 md:w-14 md:h-14 bg-primary group cursor-pointer hover:scale-110">
                     {(() => {
                       const DetailIcon = icon;
-                      return <DetailIcon className="w-8 h-8 md:w-6 md:h-6 text-primary group-hover:text-primary" />;
+                      return <DetailIcon className="w-8 h-8 md:w-6 md:h-6 text-white" />;
                     })()}
                   </div>
 

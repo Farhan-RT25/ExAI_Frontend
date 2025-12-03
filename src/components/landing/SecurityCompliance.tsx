@@ -1,146 +1,172 @@
-import { Shield, Lock, Eye, FileCheck, Server, Zap } from "lucide-react";
+import { Lock, FileCheck, Server } from "lucide-react";
 import { SectionHeading } from "./SectionHeading";
 
 const securityFeatures = [
   {
-    icon: Shield,
-    title: "Enterprise Security",
-    description: "Bank-grade encryption for all your email data",
-    size: "large",
-  },
-  {
     icon: Lock,
     title: "Data Privacy",
-    description: "GDPR compliant with full data control",
-    size: "small",
-  },
-  {
-    icon: Eye,
-    title: "Access Control",
-    description: "Role-based permissions",
-    size: "small",
+    description: "GDPR compliant with full data control. Your emails remain encrypted and private, with zero-knowledge architecture ensuring only you can access your data.",
   },
   {
     icon: FileCheck,
     title: "Compliance Ready",
-    description: "SOC 2, ISO 27001 certified infrastructure",
-    size: "medium",
+    description: "SOC 2, ISO 27001 certified infrastructure. Meet regulatory requirements with enterprise-grade security standards and comprehensive audit trails.",
   },
   {
     icon: Server,
     title: "Secure Infrastructure",
-    description: "Hosted on enterprise cloud with 99.9% uptime",
-    size: "medium",
-  },
-  {
-    icon: Zap,
-    title: "Real-time Monitoring",
-    description: "24/7 security monitoring and threat detection",
-    size: "small",
+    description: "Hosted on enterprise cloud with 99.9% uptime. Multi-region redundancy and automated backups ensure your data is always safe and accessible.",
   },
 ];
 
 export const SecurityCompliance = () => {
   return (
-    <section className="py-20 md:py-32 relative overflow-hidden">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+    <section id="security-compliance" className="py-20 md:py-32 relative overflow-hidden bg-gradient-to-b from-background via-[#0a0a1a] to-background">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         <SectionHeading
           badge="Security & Compliance"
           title="Enterprise-Grade Security"
           description="Your data security is our top priority. We implement industry-leading security measures to protect your sensitive information."
         />
 
-        {/* Bento Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 max-w-7xl mx-auto">
-          {/* Large card */}
-          <div className="md:col-span-2 md:row-span-2 bg-card border border-border rounded-2xl p-8 hover:border-primary/30 transition-all duration-300 group relative overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-            <div className="relative z-10">
-              <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
-                <Shield className="w-8 h-8 text-primary" />
-              </div>
-              <h3 className="text-2xl font-bold mb-3 text-foreground">
-                {securityFeatures[0].title}
-              </h3>
-              <p className="text-muted-foreground text-lg mb-6">
-                {securityFeatures[0].description}
-              </p>
-              <ul className="space-y-3">
-                <li className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-                  End-to-end encryption
-                </li>
-                <li className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-                  Zero-knowledge architecture
-                </li>
-                <li className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-                  Advanced threat protection
-                </li>
-              </ul>
-            </div>
-          </div>
-
-          {/* Small cards - top right */}
-          <div className="md:col-span-2 grid grid-cols-2 gap-4">
-            {securityFeatures.slice(1, 3).map((feature, index) => {
-              const Icon = feature.icon;
-              return (
-                <div
-                  key={index}
-                  className="bg-card border border-border rounded-2xl p-6 hover:border-primary/30 transition-all duration-300 group"
-                >
-                  <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
-                    <Icon className="w-6 h-6 text-primary" />
-                  </div>
-                  <h3 className="text-lg font-bold mb-2 text-foreground">
-                    {feature.title}
-                  </h3>
-                  <p className="text-sm text-muted-foreground">
-                    {feature.description}
-                  </p>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Medium cards - bottom right */}
-          {securityFeatures.slice(3, 5).map((feature, index) => {
+        {/* 3D Cards Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-7xl mx-auto mt-16">
+          {securityFeatures.map((feature, index) => {
             const Icon = feature.icon;
+            
             return (
               <div
                 key={index}
-                className="md:col-span-1 bg-card border border-border rounded-2xl p-6 hover:border-primary/30 transition-all duration-300 group"
+                className="group relative"
               >
-                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
-                  <Icon className="w-6 h-6 text-primary" />
+                {/* Card */}
+                <div 
+                  className="relative bg-gradient-to-br from-[#1a1a2e] to-[#0f0f1e] border border-primary/20 rounded-2xl p-8 h-[450px] transition-all duration-500 ease-out group-hover:border-primary/40 overflow-hidden"
+                >
+                  {/* Grid overlay */}
+                  <div 
+                    className="absolute inset-0 opacity-20"
+                    style={{
+                      backgroundImage: `
+                        linear-gradient(${index === 0 ? '#a78bfa' : index === 1 ? '#009773' : '#4a4453'}40 1px, transparent 1px),
+                        linear-gradient(90deg, ${index === 0 ? '#a78bfa' : index === 1 ? '#009773' : '#4a4453'}40 1px, transparent 1px)
+                      `,
+                      backgroundSize: '20px 20px',
+                    }}
+                  />
+
+                  {/* 3D Image Container */}
+                  <div className="relative h-48 mb-6 flex items-center justify-center">
+                    {/* Background glow */}
+                    <div 
+                      className="absolute inset-0 rounded-xl opacity-30 blur-2xl"
+                      style={{
+                        background: `radial-gradient(circle at center, ${
+                          index === 0 ? '#a78bfa' : index === 1 ? '#009773' : '#4a4453'
+                        }60 0%, transparent 70%)`,
+                      }}
+                    />
+                    
+                    {/* 3D Icon representation */}
+                    <div 
+                      className="relative z-10 w-32 h-32 flex items-center justify-center group-hover:scale-110 transition-transform duration-500"
+                      style={{
+                        transform: 'perspective(800px) rotateY(-15deg) rotateX(10deg)',
+                      }}
+                    >
+                      {/* Icon platform */}
+                      <div 
+                        className="absolute inset-0 rounded-2xl"
+                        style={{
+                          background: `linear-gradient(135deg, ${
+                            index === 0 ? '#a78bfa' : index === 1 ? '#009773' : '#4a4453'
+                          }40, ${
+                            index === 0 ? '#a78bfa' : index === 1 ? '#009773' : '#4a4453'
+                          }10)`,
+                          boxShadow: `0 10px 40px ${
+                            index === 0 ? '#a78bfa' : index === 1 ? '#009773' : '#4a4453'
+                          }30`,
+                        }}
+                      />
+                      <Icon 
+                        className="relative z-10 w-16 h-16"
+                        style={{
+                          color: index === 0 ? '#a78bfa' : index === 1 ? '#009773' : '#4a4453',
+                          filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.3))',
+                        }}
+                      />
+                      
+                      {/* Grid lines on icon */}
+                      <div 
+                        className="absolute inset-0 rounded-2xl opacity-40"
+                        style={{
+                          backgroundImage: `
+                            linear-gradient(${index === 0 ? '#a78bfa' : index === 1 ? '#009773' : '#4a4453'} 1px, transparent 1px),
+                            linear-gradient(90deg, ${index === 0 ? '#a78bfa' : index === 1 ? '#009773' : '#4a4453'} 1px, transparent 1px)
+                          `,
+                          backgroundSize: '16px 16px',
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Content */}
+                  <div className="relative z-10">
+                    {/* Title */}
+                    <h3 className="text-2xl font-bold mb-4 text-white group-hover:text-primary transition-colors duration-300">
+                      {feature.title}
+                    </h3>
+
+                    {/* Description */}
+                    <p className="text-gray-400 leading-relaxed text-sm">
+                      {feature.description}
+                    </p>
+                  </div>
+
+                  {/* Bottom accent line */}
+                  <div 
+                    className="absolute bottom-0 left-0 right-0 h-1"
+                    style={{
+                      background: `linear-gradient(90deg, transparent, ${
+                        index === 0 ? '#a78bfa' : index === 1 ? '#009773' : '#4a4453'
+                      }, transparent)`,
+                    }}
+                  />
                 </div>
-                <h3 className="text-lg font-bold mb-2 text-foreground">
-                  {feature.title}
-                </h3>
-                <p className="text-sm text-muted-foreground">
-                  {feature.description}
-                </p>
+
+                {/* Glow effect on hover */}
+                <div 
+                  className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 -z-10 blur-xl"
+                  style={{
+                    background: `radial-gradient(circle at 50% 50%, ${
+                      index === 0 ? '#a78bfa' : index === 1 ? '#009773' : '#4a4453'
+                    }30 0%, transparent 70%)`,
+                  }}
+                />
               </div>
             );
           })}
+        </div>
 
-          {/* Last small card */}
-          <div className="md:col-span-2 bg-card border border-border rounded-2xl p-6 hover:border-primary/30 transition-all duration-300 group">
-            <div className="flex items-start gap-4">
-              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform duration-300 flex-shrink-0">
-                <Zap className="w-6 h-6 text-primary" />
-              </div>
-              <div>
-                <h3 className="text-lg font-bold mb-2 text-foreground">
-                  {securityFeatures[5].title}
-                </h3>
-                <p className="text-sm text-muted-foreground">
-                  {securityFeatures[5].description}
-                </p>
-              </div>
+        {/* Bottom trust badges */}
+        <div className="flex flex-wrap items-center justify-center gap-8 mt-20 opacity-60">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
+              <Lock className="w-4 h-4 text-primary" />
             </div>
+            <span className="text-sm text-muted-foreground">SOC 2 Type II</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
+              <FileCheck className="w-4 h-4 text-primary" />
+            </div>
+            <span className="text-sm text-muted-foreground">ISO 27001</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
+              <Server className="w-4 h-4 text-primary" />
+            </div>
+            <span className="text-sm text-muted-foreground">GDPR Compliant</span>
           </div>
         </div>
       </div>

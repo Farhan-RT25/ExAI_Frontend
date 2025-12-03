@@ -12,10 +12,15 @@ export const initiateZohoSignup = (): void => {
   window.location.href = `${API_BASE}/auth/zoho/login`;
 };
 
-// This function extracts the token from the callback URL
-export const handleZohoCallback = (): { token?: string; error?: string } => {
+// This function extracts the token and redirect from the callback URL
+export const handleZohoCallback = (): { 
+  token?: string; 
+  error?: string;
+  redirect?: string;
+} => {
   const params = new URLSearchParams(window.location.search);
   const token = params.get('token');
+  const redirect = params.get('redirect'); // Backend-provided redirect path
   const error = params.get('error');
 
   if (error) {
@@ -23,7 +28,10 @@ export const handleZohoCallback = (): { token?: string; error?: string } => {
   }
 
   if (token) {
-    return { token };
+    return { 
+      token,
+      redirect: redirect || undefined // Include redirect if provided by backend
+    };
   }
 
   return { error: 'No token received' };

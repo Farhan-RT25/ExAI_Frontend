@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
 import { SiGmail } from "react-icons/si";
 import { MdEmail } from "react-icons/md";
+import { Link } from "react-router-dom";
 
-const SparkleButton = ({ onClick, children }) => (
+const SparkleButton = ({ children }) => (
   <button
-    onClick={onClick}
     className="px-8 py-4 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-lg transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-purple-500/50"
   >
     {children}
@@ -34,12 +34,12 @@ export default function Hero() {
   };
 
   return (
-    <section className="relative pt-32 pb-20 min-h-screen flex items-center overflow-hidden">
+    <section id="hero" className="relative pt-32 pb-20 min-h-screen flex items-center overflow-hidden">
       {/* Background Image with optimization */}
       <div className="absolute inset-0 z-0">
         {/* Low quality placeholder - loads instantly */}
         <div className="absolute inset-0 bg-gradient-to-b from-slate-900 via-purple-900/20 to-slate-900" />
-        
+
         {/* Actual background image */}
         <img
           src="src/assets/heroBg.webp"
@@ -50,9 +50,9 @@ export default function Hero() {
           loading="eager"
           onLoad={() => setImageLoaded(true)}
         />
-        
+
         {/* Overlay for text readability */}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/60" />
+        {/* <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/60" /> */}
       </div>
 
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
@@ -78,38 +78,21 @@ export default function Hero() {
             <br />
             Management
           </h1>
-          
+
           <p className="text-lg md:text-xl text-white/80 mb-12 max-w-3xl mx-auto leading-relaxed">
-            Empower your workflow with AI solutions that prioritize transparency,
-            efficiency, and intelligent automation for your email management needs.
+            Empower your workflow with AI solutions that prioritize
+            transparency, efficiency, and intelligent automation for your email
+            management needs.
           </p>
 
           {/* CTA Button */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12">
-            <SparkleButton onClick={handleRequestDemo}>
-              Get Started Free
+            <SparkleButton>
+              <Link to="/signup">Get Started Free</Link>
             </SparkleButton>
             <button className="px-8 py-4 text-white font-semibold rounded-lg transition-all duration-300 hover:text-purple-300">
               Watch Demo →
             </button>
-          </div>
-
-          {/* Email Provider Icons */}
-          <div className="flex items-center justify-center gap-6 flex-wrap">
-            <div className="flex items-center gap-3 px-6 py-3 rounded-2xl bg-white/10 border border-white/20 backdrop-blur-sm hover:border-purple-400/50 transition-all duration-300 group cursor-pointer">
-              <SiGmail className="w-6 h-6 text-white group-hover:text-purple-300 transition-colors" />
-              <span className="text-sm font-medium text-white/70 group-hover:text-white transition-colors">Gmail</span>
-            </div>
-
-            <div className="flex items-center gap-3 px-6 py-3 rounded-2xl bg-white/10 border border-white/20 backdrop-blur-sm hover:border-purple-400/50 transition-all duration-300 group cursor-pointer">
-              <SiGmail className="w-6 h-6 text-white group-hover:text-purple-300 transition-colors" />
-              <span className="text-sm font-medium text-white/70 group-hover:text-white transition-colors">Outlook</span>
-            </div>
-
-            <div className="flex items-center gap-3 px-6 py-3 rounded-2xl bg-white/10 border border-white/20 backdrop-blur-sm hover:border-purple-400/50 transition-all duration-300 group cursor-pointer">
-              <MdEmail className="w-6 h-6 text-white group-hover:text-purple-300 transition-colors" />
-              <span className="text-sm font-medium text-white/70 group-hover:text-white transition-colors">Zoho Mail</span>
-            </div>
           </div>
         </div>
       </div>
