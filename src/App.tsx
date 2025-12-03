@@ -19,6 +19,7 @@ import DashboardHome from "./pages/dashboard/DashboardHome";
 import Categorization from "./pages/dashboard/Categorization";
 import Drafts from "./pages/dashboard/Drafts";
 import Meetings from "./pages/dashboard/Meetings";
+import AIAssistant from "./pages/dashboard/AIAssistant";
 import Connections from "./pages/dashboard/Connections";
 import Settings from "./pages/dashboard/Settings";
 import NotFound from "./pages/NotFound";
@@ -53,6 +54,7 @@ const App = () => (
               <Route path="categorization" element={<Categorization />} />
               <Route path="drafts" element={<Drafts />} />
               <Route path="meetings" element={<Meetings />} />
+              <Route path="ai-assistant" element={<AIAssistant />} />
               <Route path="connections" element={<Connections />} />
               <Route path="settings" element={<Settings />} />
             </Route>
