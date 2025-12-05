@@ -4,10 +4,10 @@ import { motion } from "framer-motion";
 
 export const HowItWorks = () => {
   return (
-    <section id="how-it-works" className="py-24 bg-background relative overflow-hidden">
-      {/* Space ambient lighting */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[500px] bg-indigo-500/10 blur-[120px] rounded-full pointer-events-none" />
-      <div className="absolute bottom-0 right-0 w-[800px] h-[600px] bg-purple-500/10 blur-[100px] rounded-full pointer-events-none" />
+    <section id="how-it-works" className="py-24 md:py-32 bg-background relative overflow-hidden">
+      {/* Subtle ambient lighting */}
+      <div className="absolute top-1/3 left-0 w-[400px] h-[400px] bg-primary/5 blur-[150px] rounded-full pointer-events-none" />
+      <div className="absolute bottom-1/3 right-0 w-[400px] h-[400px] bg-purple-600/5 blur-[150px] rounded-full pointer-events-none" />
 
       <div className="container mx-auto px-4 relative z-10">
         <motion.div

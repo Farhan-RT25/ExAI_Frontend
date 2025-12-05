@@ -21,7 +21,11 @@ const securityFeatures = [
 
 export const SecurityCompliance = () => {
   return (
-    <section id="security-compliance" className="py-20 md:py-32 relative overflow-hidden bg-gradient-to-b from-background via-[#0a0a1a] to-background">
+    <section id="security-compliance" className="py-24 md:py-32 bg-background relative overflow-hidden">
+      {/* Subtle ambient lighting */}
+      <div className="absolute top-1/3 left-1/4 w-[400px] h-[400px] bg-primary/5 blur-[150px] rounded-full pointer-events-none" />
+      <div className="absolute bottom-1/3 right-1/4 w-[400px] h-[400px] bg-purple-600/5 blur-[150px] rounded-full pointer-events-none" />
+      
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         <SectionHeading
           badge="Security & Compliance"

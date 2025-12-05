@@ -5,10 +5,10 @@ import { motion } from "framer-motion";
 
 export const CTA = () => {
   return (
-    <section className="py-20 md:py-32 relative overflow-hidden bg-background">
-      {/* Space ambient lighting */}
-      <div className="absolute top-0 right-1/4 w-96 h-96 bg-purple-600/20 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-0 left-1/4 w-96 h-96 bg-primary/20 rounded-full blur-3xl pointer-events-none" />
+    <section className="py-24 md:py-32 bg-background relative overflow-hidden">
+      {/* Subtle ambient lighting */}
+      <div className="absolute top-1/2 left-1/4 w-[400px] h-[400px] bg-primary/5 blur-[150px] rounded-full pointer-events-none -translate-y-1/2" />
+      <div className="absolute top-1/2 right-1/4 w-[400px] h-[400px] bg-purple-600/5 blur-[150px] rounded-full pointer-events-none -translate-y-1/2" />
 
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         <motion.div 
