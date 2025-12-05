@@ -1,5 +1,6 @@
 import { MdDashboard, MdCategory, MdEdit, MdVideoLibrary, MdLink, MdSettings, MdLogout, MdMail, MdLightMode, MdDarkMode } from "react-icons/md";
-import { Bot } from "lucide-react";
+import { RiRobot3Fill } from "react-icons/ri";
+import { Webhook } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -23,7 +24,7 @@ const menuItems = [
   { title: "Categorization", url: "/dashboard/categorization", icon: MdCategory },
   { title: "Drafts", url: "/dashboard/drafts", icon: MdEdit },
   { title: "Meetings", url: "/dashboard/meetings", icon: MdVideoLibrary },
-  { title: "AI Assistant", url: "/dashboard/ai-assistant", icon: Bot, isLucide: true },
+  { title: "AI Assistant", url: "/dashboard/ai-assistant", icon: RiRobot3Fill, isLucide: true },
   { title: "Connections", url: "/dashboard/connections", icon: MdLink },
 ];
 
@@ -95,7 +96,7 @@ export function AppSidebar() {
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <div className="p-2 mb-5 mt-2 bg-gradient-primary rounded-sm">
-                <MdMail className="h-4 w-4 text-primary-foreground" />
+                <Webhook className="h-4 w-4 text-primary-foreground" />
               </div>
               {!isCollapsed && <span className="font-semibold mb-3">Nyx</span>}
             </div>
@@ -130,7 +131,7 @@ export function AppSidebar() {
                         } ${
                           isActive
                           ? "bg-primary/10 text-primary font-semibold hover:bg-primary/15 border border-primary rounded-md"
-                          : "text-foreground hover:bg-primary/10 hover:text-primary rounded-md"
+                          : "text-foreground/60 hover:bg-primary/10 hover:text-primary rounded-md"
                         }`}>
                           {item.isLucide ? (
                             <item.icon className={`h-4 w-4 flex-shrink-0 ${isActive ? '' : ''}`} />
@@ -169,7 +170,7 @@ export function AppSidebar() {
                       } ${
                         isActive
                           ? "bg-primary/10 text-primary font-semibold hover:bg-primary/15 border border-primary rounded-md"
-                          : "text-foreground hover:bg-primary/10 hover:text-primary rounded-md"
+                          : "text-foreground/60 hover:bg-primary/10 hover:text-primary rounded-md"
                       }`}>
                         <MdSettings className="h-4 w-4 flex-shrink-0" />
                         {!isCollapsed && <span>Settings</span>}
@@ -186,7 +187,7 @@ export function AppSidebar() {
                 >
                   <div className={`flex items-center gap-3 py-2 text-sm w-full ${
                     isCollapsed ? 'px-0 py-2 justify-center' : 'px-3'
-                  } text-foreground hover:bg-primary/10 hover:text-primary rounded-md cursor-pointer`}>
+                  } text-foreground/60 hover:bg-primary/10 hover:text-primary rounded-md cursor-pointer`}>
                     {isDarkMode ? (
                       <MdLightMode className="h-4 w-4 flex-shrink-0" />
                     ) : (
@@ -204,7 +205,7 @@ export function AppSidebar() {
                 >
                   <div className={`flex items-center gap-3 py-2 text-sm w-full ${
                     isCollapsed ? 'px-0 py-2 justify-center' : 'px-3'
-                  } text-foreground hover:bg-primary/10 hover:text-primary rounded-md cursor-pointer`}>
+                  } text-[#e60f00] hover:bg-[#e60f00]/10 rounded-md cursor-pointer`}>
                     <MdLogout className="h-4 w-4 flex-shrink-0" />
                     {!isCollapsed && <span>Logout</span>}
                   </div>

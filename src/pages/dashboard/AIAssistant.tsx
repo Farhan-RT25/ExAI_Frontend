@@ -90,10 +90,6 @@ const AIAssistant = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-2">
-            <Bot className="h-8 w-8 text-primary" />
-            AI Assistant
-          </h1>
           <p className="text-muted-foreground mt-1">Your intelligent email and productivity companion</p>
         </div>
         <Badge variant="secondary" className="w-fit flex items-center gap-1">

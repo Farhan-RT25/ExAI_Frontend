@@ -19,7 +19,7 @@ const FaqItem = ({ item, index }: FaqItemProps) => {
     <div 
       className={`overflow-hidden transition-all duration-300 ${
         isOpen 
-          ? 'bg-primary/10 border-2 border-primary shadow-lg' 
+          ? 'bg-primary/10 rounded-sm border-2 border-primary shadow-lg' 
           : 'bg-muted/10 border-b border-border hover:bg-muted/20 hover:shadow-sm'
       }`}
     >
