@@ -86,6 +86,7 @@ const Settings = () => {
       if (token) {
         saveAuthData({
           access_token: token,
+          token_type: 'bearer',
           user: updatedUser
         });
       }
@@ -346,6 +347,7 @@ const Settings = () => {
                           if (token) {
                             saveAuthData({
                               access_token: token,
+                              token_type: 'bearer',
                               user: updatedUser
                             });
                           }
@@ -394,6 +396,7 @@ const Settings = () => {
                           if (token) {
                             saveAuthData({
                               access_token: token,
+                              token_type: 'bearer',
                               user: updatedUser
                             });
                           }
