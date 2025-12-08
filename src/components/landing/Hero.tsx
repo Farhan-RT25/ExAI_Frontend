@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowRight, Sparkles } from "lucide-react";
+import { ArrowRight, Cat, Sparkles } from "lucide-react";
+import CTAButton from "@/components/ui/CTAButton";
 
 export default function Hero() {
   const words = ["Email", "Calendar", "Meeting"];
@@ -90,16 +91,10 @@ export default function Hero() {
           >
             <Link 
               to="/signup"
-              className="group relative inline-flex items-center gap-2 px-8 py-4 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-xl transition-all duration-300 shadow-lg hover:shadow-glow"
             >
-              Get Started Free
-              <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-            </Link>
-            <Link 
-              to="/login"
-              className="px-8 py-4 text-foreground font-semibold rounded-xl border border-border hover:border-primary/50 hover:bg-primary/5 transition-all duration-300"
-            >
-              Sign In
+              <CTAButton>
+                Get Started Free
+              </CTAButton>
             </Link>
           </motion.div>
 

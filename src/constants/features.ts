@@ -14,9 +14,9 @@ export interface BottomFeature {
 }
 
 export const featuresHeading = {
-  title: "Everything You Need for",
+  title: "Achieve",
   titleEmphasis: "Email Excellence",
-  description: "A comprehensive suite of AI-powered tools designed to transform how you manage email communication, from intelligent categorization to automated responses."
+  description: "A comprehensive suite of AI-powered tools designed to transform how you manage your email."
 };
 
 export const features: Feature[] = [

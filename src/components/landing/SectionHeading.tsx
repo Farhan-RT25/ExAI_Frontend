@@ -13,7 +13,7 @@ export const SectionHeading = ({ badge, title, description, className }: Section
       {badge && (
         <div className="inline-flex items-center px-4 py-2 bg-primary/5 backdrop-blur-sm mb-4">
           {/* Added a simple loader/spinner icon (replace 'LoaderIcon' with your actual icon component) */}
-          <Loader className="w-4 h-4 mr-2 text-primary animate-spin" />
+          <Loader className="w-4 h-4 mr-2 text-primary animate-spin duration-3000" />
           <span className="text-sm font-medium text-primary uppercase">{badge}</span>
         </div>
       )}

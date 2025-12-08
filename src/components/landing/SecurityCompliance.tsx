@@ -1,5 +1,8 @@
 import { Lock, FileCheck, Server } from "lucide-react";
 import { SectionHeading } from "./SectionHeading";
+import SOCBadge from "@/assets/soc.png";
+import ISOBadge from "@/assets/iso.png";
+import GDPRBadge from "@/assets/gdpr.png";
 
 const securityFeatures = [
   {
@@ -153,24 +156,18 @@ export const SecurityCompliance = () => {
         </div>
 
         {/* Bottom trust badges */}
-        <div className="flex flex-wrap items-center justify-center gap-8 mt-20 opacity-60">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
-              <Lock className="w-4 h-4 text-primary" />
-            </div>
-            <span className="text-sm text-muted-foreground">SOC 2 Type II</span>
+        <div className="flex flex-wrap items-center justify-center gap-12 mt-20">
+          <div className="group flex flex-col items-center gap-3 px-6 py-4 rounded-lg transition-all hover:bg-primary/5">
+            <img src={SOCBadge} alt="SOC 2 Type II Certified" className="h-20 w-20 object-contain group-hover:scale-110 transition-transform duration-300" />
+            <span className="text-xs font-medium text-muted-foreground">SOC 2 Type II</span>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
-              <FileCheck className="w-4 h-4 text-primary" />
-            </div>
-            <span className="text-sm text-muted-foreground">ISO 27001</span>
+          <div className="group flex flex-col items-center gap-3 px-6 py-4 rounded-lg transition-all hover:bg-primary/5">
+            <img src={ISOBadge} alt="ISO 27001 Certified" className="h-20 w-20 object-contain group-hover:scale-110 transition-transform duration-300" />
+            <span className="text-xs font-medium text-muted-foreground">ISO 27001</span>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
-              <Server className="w-4 h-4 text-primary" />
-            </div>
-            <span className="text-sm text-muted-foreground">GDPR Compliant</span>
+          <div className="group flex flex-col items-center gap-3 px-6 py-4 rounded-lg transition-all hover:bg-primary/5">
+            <img src={GDPRBadge} alt="GDPR Compliant" className="h-20 w-20 object-contain group-hover:scale-110 transition-transform duration-300" />
+            <span className="text-xs font-medium text-muted-foreground">GDPR Compliant</span>
           </div>
         </div>
       </div>
