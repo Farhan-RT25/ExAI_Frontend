@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
@@ -7,10 +7,198 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Upload, CreditCard } from "lucide-react";
+import { Upload, CreditCard, Loader2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { getUserProfile, updateProfile, changePassword, type ProfileUpdateRequest, type PasswordChangeRequest } from "@/lib/api/settings";
+import { getUser, saveAuthData } from "@/lib/api/auth";
+import type { User } from "@/lib/api/auth";
 
 const Settings = () => {
+  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("profile");
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+  
+  // Profile form state
+  const [fullName, setFullName] = useState("");
+  const [profileImageUrl, setProfileImageUrl] = useState("");
+  
+  // Password change form state
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+
+  useEffect(() => {
+    loadUserProfile();
+  }, []);
+
+  const loadUserProfile = async () => {
+    try {
+      setLoading(true);
+      const userData = await getUserProfile();
+      setUser(userData);
+      setFullName(userData.full_name || "");
+      setProfileImageUrl(userData.profile_image_url || "");
+    } catch (error) {
+      console.error("Failed to load profile:", error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to load profile",
+        variant: "destructive",
+      });
+      // Fallback to stored user data
+      const storedUser = getUser();
+      if (storedUser) {
+        setUser(storedUser);
+        setFullName(storedUser.full_name || "");
+        setProfileImageUrl(storedUser.profile_image_url || "");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSaveProfile = async () => {
+    try {
+      setSaving(true);
+      const updateData: ProfileUpdateRequest = {};
+      if (fullName !== user?.full_name) {
+        updateData.full_name = fullName;
+      }
+      if (profileImageUrl !== user?.profile_image_url) {
+        updateData.profile_image_url = profileImageUrl;
+      }
+      
+      if (Object.keys(updateData).length === 0) {
+        toast({
+          title: "No changes",
+          description: "No changes to save",
+        });
+        return;
+      }
+
+      const updatedUser = await updateProfile(updateData);
+      setUser(updatedUser);
+      
+      // Update stored user data
+      const token = localStorage.getItem('access_token');
+      if (token) {
+        saveAuthData({
+          access_token: token,
+          user: updatedUser
+        });
+      }
+      
+      toast({
+        title: "Success",
+        description: "Profile updated successfully",
+      });
+    } catch (error) {
+      console.error("Failed to update profile:", error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to update profile",
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleChangePassword = async () => {
+    if (newPassword !== confirmPassword) {
+      toast({
+        title: "Error",
+        description: "New passwords do not match",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (newPassword.length < 8) {
+      toast({
+        title: "Error",
+        description: "Password must be at least 8 characters long",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      setSaving(true);
+      const passwordData: PasswordChangeRequest = {
+        current_password: currentPassword,
+        new_password: newPassword,
+      };
+      
+      await changePassword(passwordData);
+      
+      toast({
+        title: "Success",
+        description: "Password changed successfully",
+      });
+      
+      // Reset form
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (error) {
+      console.error("Failed to change password:", error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to change password",
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const getInitials = (name?: string | null, email?: string) => {
+    if (name) {
+      return name
+        .split(" ")
+        .map((n) => n[0])
+        .join("")
+        .toUpperCase()
+        .slice(0, 2);
+    }
+    if (email) {
+      return email[0].toUpperCase();
+    }
+    return "U";
+  };
+
+  const formatDate = (dateString?: string | null) => {
+    if (!dateString) return "N/A";
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      });
+    } catch {
+      return "N/A";
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-muted-foreground">Failed to load user profile</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4 md:space-y-6">
@@ -19,16 +207,16 @@ const Settings = () => {
         <div className="bg-gradient-to-r from-cyan-500 to-blue-500 h-32 relative">
           <div className="absolute -bottom-12 left-8">
             <Avatar className="h-24 w-24 border-4 border-background">
-              <AvatarImage src="" />
+              <AvatarImage src={user.profile_image_url || ""} />
               <AvatarFallback className="bg-gradient-primary text-primary-foreground text-2xl">
-                KW
+                {getInitials(user.full_name, user.email)}
               </AvatarFallback>
             </Avatar>
           </div>
         </div>
         <div className="pt-16 pb-6 px-8">
-          <h2 className="text-xl font-semibold">Kristin Watson</h2>
-          <p className="text-sm text-muted-foreground">kristin.watson@company.com</p>
+          <h2 className="text-xl font-semibold">{user.full_name || "User"}</h2>
+          <p className="text-sm text-muted-foreground">{user.email}</p>
         </div>
       </Card>
 
@@ -87,12 +275,14 @@ const Settings = () => {
             </CardHeader>
             <CardContent className="px-5 pb-5 space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="username" className="text-sm">User Name</Label>
-                <Input id="username" defaultValue="@kristinw" className="text-sm" />
-              </div>
-              <div className="space-y-2">
                 <Label htmlFor="fullname" className="text-sm">Full name</Label>
-                <Input id="fullname" defaultValue="Kristin Watson" className="text-sm" />
+                <Input 
+                  id="fullname" 
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  className="text-sm" 
+                  placeholder="Enter your full name"
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="email" className="text-sm">Email address</Label>
@@ -100,28 +290,30 @@ const Settings = () => {
                   <Input
                     id="email"
                     type="email"
-                    defaultValue="kristin.watson@company.com"
+                    value={user.email}
                     className="text-sm flex-1"
                     disabled
                   />
-                  <Button variant="outline" size="sm" className="text-xs">
-                    Change email
-                  </Button>
                 </div>
+                <p className="text-xs text-muted-foreground">
+                  Email cannot be changed
+                </p>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="phone" className="text-sm">Phone number</Label>
-                <div className="flex gap-2">
-                  <Input
-                    id="phone"
-                    type="tel"
-                    defaultValue="+1 9825892754"
-                    className="text-sm flex-1"
-                  />
-                  <Button variant="outline" size="sm" className="text-xs">
-                    Change phone number
-                  </Button>
-                </div>
+              <div className="flex justify-end pt-2">
+                <Button 
+                  onClick={handleSaveProfile}
+                  disabled={saving}
+                  size="sm"
+                >
+                  {saving ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    "Save Changes"
+                  )}
+                </Button>
               </div>
             </CardContent>
           </Card>
@@ -133,20 +325,158 @@ const Settings = () => {
             <CardContent className="px-5 pb-5">
               <div className="flex items-center gap-4">
                 <Avatar className="h-16 w-16">
-                  <AvatarImage src="" />
+                  <AvatarImage src={profileImageUrl || ""} />
                   <AvatarFallback className="bg-gradient-primary text-primary-foreground text-xl">
-                    KW
+                    {getInitials(user.full_name, user.email)}
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex gap-2">
-                  <Button size="sm" className="text-xs">
-                    <Upload className="h-3.5 w-3.5 mr-1.5" />
-                    Upload Image
+                  <Button 
+                    size="sm" 
+                    className="text-xs"
+                    onClick={async () => {
+                      const url = prompt("Enter image URL:");
+                      if (url && url.trim()) {
+                        try {
+                          setSaving(true);
+                          const updatedUser = await updateProfile({ profile_image_url: url.trim() });
+                          setProfileImageUrl(url.trim());
+                          setUser(updatedUser);
+                          const token = localStorage.getItem('access_token');
+                          if (token) {
+                            saveAuthData({
+                              access_token: token,
+                              user: updatedUser
+                            });
+                          }
+                          toast({
+                            title: "Success",
+                            description: "Profile image updated successfully",
+                          });
+                        } catch (error) {
+                          toast({
+                            title: "Error",
+                            description: error instanceof Error ? error.message : "Failed to update image",
+                            variant: "destructive",
+                          });
+                        } finally {
+                          setSaving(false);
+                        }
+                      }
+                    }}
+                    disabled={saving}
+                  >
+                    {saving ? (
+                      <>
+                        <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                        Updating...
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="h-3.5 w-3.5 mr-1.5" />
+                        Update
+                      </>
+                    )}
                   </Button>
-                  <Button variant="outline" size="sm" className="text-xs">
-                    Remove Image
-                  </Button>
+                  {profileImageUrl && (
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="text-xs"
+                      onClick={async () => {
+                        try {
+                          setSaving(true);
+                          await updateProfile({ profile_image_url: "" });
+                          setProfileImageUrl("");
+                          const updatedUser = await getUserProfile();
+                          setUser(updatedUser);
+                          const token = localStorage.getItem('access_token');
+                          if (token) {
+                            saveAuthData({
+                              access_token: token,
+                              user: updatedUser
+                            });
+                          }
+                          toast({
+                            title: "Success",
+                            description: "Profile image removed successfully",
+                          });
+                        } catch (error) {
+                          toast({
+                            title: "Error",
+                            description: error instanceof Error ? error.message : "Failed to remove image",
+                            variant: "destructive",
+                          });
+                        } finally {
+                          setSaving(false);
+                        }
+                      }}
+                      disabled={saving}
+                    >
+                      Remove
+                    </Button>
+                  )}
                 </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-card hover:shadow-card-hover transition-all border-border">
+            <CardHeader className="pb-3 pt-5 px-5">
+              <CardTitle className="text-sm font-medium">Change Password</CardTitle>
+              <CardDescription className="text-xs">
+                Update your password to keep your account secure
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="px-5 pb-5 space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="current-password" className="text-sm">Current Password</Label>
+                <Input
+                  id="current-password"
+                  type="password"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  className="text-sm"
+                  placeholder="Enter current password"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="new-password" className="text-sm">New Password</Label>
+                <Input
+                  id="new-password"
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className="text-sm"
+                  placeholder="Enter new password (min 8 characters)"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="confirm-password" className="text-sm">Confirm New Password</Label>
+                <Input
+                  id="confirm-password"
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="text-sm"
+                  placeholder="Confirm new password"
+                />
+              </div>
+              <div className="flex justify-end pt-2">
+                <Button 
+                  onClick={handleChangePassword}
+                  disabled={saving || !currentPassword || !newPassword || !confirmPassword}
+                  size="sm"
+                >
+                  {saving ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Changing...
+                    </>
+                  ) : (
+                    "Change Password"
+                  )}
+                </Button>
               </div>
             </CardContent>
           </Card>
@@ -158,22 +488,28 @@ const Settings = () => {
             <CardContent className="px-5 pb-5 space-y-4">
               <div className="flex items-center justify-between py-3 border-b border-border">
                 <span className="text-sm font-medium">Member Since</span>
-                <span className="text-sm text-muted-foreground">January 15, 2025</span>
+                <span className="text-sm text-muted-foreground">
+                  {formatDate(user.created_at)}
+                </span>
               </div>
-              <div className="pt-2">
-                <Button variant="destructive" className="w-full text-sm" size="sm">
-                  Delete Account
-                </Button>
-                <p className="text-xs text-muted-foreground text-center mt-2">
-                  This action cannot be undone
-                </p>
+              <div className="flex items-center justify-between py-3 border-b border-border">
+                <span className="text-sm font-medium">Last Login</span>
+                <span className="text-sm text-muted-foreground">
+                  {formatDate(user.last_login)}
+                </span>
+              </div>
+              <div className="flex items-center justify-between py-3 border-b border-border">
+                <span className="text-sm font-medium">Account Status</span>
+                <Badge variant={user.status === 'active' ? 'default' : 'secondary'} className="text-xs">
+                  {user.status}
+                </Badge>
               </div>
             </CardContent>
           </Card>
         </div>
       )}
 
-      {/* Preferences Tab */}
+      {/* Preferences Tab - Keep as is for now */}
       {activeTab === "preferences" && (
         <div className="space-y-4 md:space-y-6">
           <Card className="shadow-card hover:shadow-card-hover transition-all border-border">
@@ -315,7 +651,7 @@ const Settings = () => {
         </div>
       )}
 
-      {/* Billing Tab */}
+      {/* Billing Tab - Keep as is for now */}
       {activeTab === "billing" && (
         <div className="space-y-4 md:space-y-6">
           <Card className="shadow-card hover:shadow-card-hover transition-all border-border">
@@ -326,83 +662,14 @@ const Settings = () => {
             <CardContent className="px-5 pb-5">
               <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg">
                 <div>
-                  <h3 className="text-sm font-semibold mb-1">Pro Plan</h3>
-                  <p className="text-xs text-muted-foreground">$29.99 / month</p>
+                  <h3 className="text-sm font-semibold mb-1">Free Plan</h3>
+                  <p className="text-xs text-muted-foreground">$0.00 / month</p>
                 </div>
                 <Badge className="bg-success text-success-foreground text-xs">Active</Badge>
               </div>
-              <div className="mt-4 space-y-2">
-                <div className="flex items-center justify-between text-xs py-2">
-                  <span className="text-muted-foreground">Next billing date</span>
-                  <span className="font-medium">December 15, 2025</span>
-                </div>
-                <div className="flex items-center justify-between text-xs py-2">
-                  <span className="text-muted-foreground">Payment method</span>
-                  <span className="font-medium">•••• •••• •••• 4242</span>
-                </div>
-              </div>
-              <div className="mt-4 flex gap-2">
-                <Button variant="outline" size="sm" className="flex-1 text-xs">
-                  Change Plan
-                </Button>
-                <Button variant="outline" size="sm" className="flex-1 text-xs">
-                  Cancel Subscription
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="shadow-card hover:shadow-card-hover transition-all border-border">
-            <CardHeader className="pb-3 pt-5 px-5">
-              <CardTitle className="text-sm font-medium">Payment Method</CardTitle>
-              <CardDescription className="text-xs">Manage your payment information</CardDescription>
-            </CardHeader>
-            <CardContent className="px-5 pb-5">
-              <div className="flex items-center gap-4 p-4 bg-muted/30 rounded-lg mb-4">
-                <div className="p-2 bg-background rounded">
-                  <CreditCard className="h-5 w-5" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium">Visa ending in 4242</p>
-                  <p className="text-xs text-muted-foreground">Expires 12/2027</p>
-                </div>
-                <Badge variant="secondary" className="text-xs">Default</Badge>
-              </div>
-              <Button variant="outline" size="sm" className="w-full text-xs">
-                Update Payment Method
-              </Button>
-            </CardContent>
-          </Card>
-
-          <Card className="shadow-card hover:shadow-card-hover transition-all border-border">
-            <CardHeader className="pb-3 pt-5 px-5">
-              <CardTitle className="text-sm font-medium">Billing History</CardTitle>
-              <CardDescription className="text-xs">View your past invoices</CardDescription>
-            </CardHeader>
-            <CardContent className="px-5 pb-5">
-              <div className="space-y-2">
-                {[
-                  { date: "Nov 15, 2025", amount: "$29.99", status: "Paid" },
-                  { date: "Oct 15, 2025", amount: "$29.99", status: "Paid" },
-                  { date: "Sep 15, 2025", amount: "$29.99", status: "Paid" },
-                ].map((invoice, idx) => (
-                  <div
-                    key={idx}
-                    className="flex items-center justify-between p-3 hover:bg-muted/30 rounded-lg transition-colors"
-                  >
-                    <div>
-                      <p className="text-sm font-medium">{invoice.date}</p>
-                      <p className="text-xs text-muted-foreground">{invoice.status}</p>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <span className="text-sm font-semibold">{invoice.amount}</span>
-                      <Button variant="ghost" size="sm" className="text-xs">
-                        Download
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <p className="text-xs text-muted-foreground mt-4 text-center">
+                Billing features coming soon
+              </p>
             </CardContent>
           </Card>
         </div>

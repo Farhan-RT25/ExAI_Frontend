@@ -1,93 +1,121 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
-import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Badge } from "@/components/ui/badge";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { HelpCircle, Bell, Settings } from "lucide-react";
-
-const emailAccounts = [
-  { 
-    id: "work", 
-    name: "Work", 
-    email: "kristin.watson@company.com", 
-    color: "bg-blue-500",
-    draftsEnabled: true,
-    customPrompt: ""
-  },
-  { 
-    id: "personal", 
-    name: "Personal", 
-    email: "kristin.w@gmail.com", 
-    color: "bg-purple-500",
-    draftsEnabled: true,
-    customPrompt: ""
-  },
-  { 
-    id: "business", 
-    name: "Business", 
-    email: "kw@mybusiness.com", 
-    color: "bg-green-500",
-    draftsEnabled: false,
-    customPrompt: ""
-  },
-];
-
-const categories = [
-  { id: "to-respond", name: "To Respond", enabled: true },
-  { id: "sales", name: "Sales", enabled: true },
-  { id: "admin", name: "Admin", enabled: false },
-  { id: "marketing", name: "Marketing", enabled: false },
-  { id: "hr", name: "HR", enabled: true },
-];
+import { HelpCircle, Bell, Loader2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { getDraftSettings, saveDraftSettings, DraftSettings, DraftCategorySetting } from "@/lib/api/draftSettings";
+import { getUser } from "@/lib/api/auth";
 
 const Drafts = () => {
+  const { toast } = useToast();
   const [globalEnabled, setGlobalEnabled] = useState(true);
   const [notifyOnDrafts, setNotifyOnDrafts] = useState(true);
-  const [accounts, setAccounts] = useState(emailAccounts);
-  const [selectedCategories, setSelectedCategories] = useState(categories);
-  const [globalPrompt, setGlobalPrompt] = useState("");
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [selectedAccount, setSelectedAccount] = useState(null);
-  const [accountPrompt, setAccountPrompt] = useState("");
+  const [selectedCategories, setSelectedCategories] = useState<DraftCategorySetting[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [userId, setUserId] = useState<number | null>(null);
 
-  const handleAccountToggle = (accountId, checked) => {
-    setAccounts(prev => prev.map(acc => 
-      acc.id === accountId ? { ...acc, draftsEnabled: checked } : acc
-    ));
-  };
+  // Load draft settings on mount
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        setIsLoading(true);
+        const user = getUser();
+        if (!user || !user.user_id) {
+          toast({
+            title: "Error",
+            description: "Please login to access draft settings",
+            variant: "destructive",
+          });
+          return;
+        }
 
-  const handleCategoryToggle = (categoryId, checked) => {
+        setUserId(user.user_id);
+        const settings = await getDraftSettings(user.user_id);
+        
+        setGlobalEnabled(settings.enabled);
+        setNotifyOnDrafts(settings.notify_on_draft_ready);
+        
+        // Set selected categories - mark enabled ones from selected_categories
+        const categoryMap = new Map(
+          settings.all_categories.map(cat => [cat.id, cat])
+        );
+        
+        const updatedCategories = settings.all_categories.map(cat => ({
+          ...cat,
+          enabled: settings.selected_categories.includes(cat.id)
+        }));
+        
+        setSelectedCategories(updatedCategories);
+      } catch (error) {
+        console.error("Failed to load draft settings:", error);
+        toast({
+          title: "Error",
+          description: error instanceof Error ? error.message : "Failed to load draft settings",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadSettings();
+  }, [toast]);
+
+  const handleCategoryToggle = (categoryId: string, checked: boolean) => {
     setSelectedCategories(prev => prev.map(cat =>
       cat.id === categoryId ? { ...cat, enabled: checked } : cat
     ));
   };
 
-  const openAccountSettings = (account) => {
-    setSelectedAccount(account);
-    setAccountPrompt(account.customPrompt);
-    setDialogOpen(true);
+  const handleSave = async () => {
+    if (!userId) {
+      toast({
+        title: "Error",
+        description: "User ID not found",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      setIsSaving(true);
+      
+      const selectedCategoryIds = selectedCategories
+        .filter(cat => cat.enabled)
+        .map(cat => cat.id);
+
+      await saveDraftSettings(userId, {
+        enabled: globalEnabled,
+        notify_on_draft_ready: notifyOnDrafts,
+        selected_categories: selectedCategoryIds,
+      });
+
+      toast({
+        title: "Success",
+        description: "Draft settings saved successfully",
+      });
+    } catch (error) {
+      console.error("Failed to save draft settings:", error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to save draft settings",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  const saveAccountSettings = () => {
-    setAccounts(prev => prev.map(acc =>
-      acc.id === selectedAccount.id ? { ...acc, customPrompt: accountPrompt } : acc
-    ));
-    setDialogOpen(false);
-    setSelectedAccount(null);
-    setAccountPrompt("");
-  };
-
-  const characterCount = globalPrompt.length;
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4 md:space-y-6">
@@ -145,167 +173,50 @@ const Drafts = () => {
 
           <div className="pt-2">
             <p className="text-sm font-medium mb-3">Auto-draft for these categories</p>
-            <div className="space-y-2">
-              {selectedCategories.map((category) => (
-                <div key={category.id} className="flex items-center space-x-3 py-2">
-                  <Checkbox
-                    id={category.id}
-                    checked={category.enabled}
-                    onCheckedChange={(checked) => handleCategoryToggle(category.id, checked)}
-                  />
-                  <label
-                    htmlFor={category.id}
-                    className="text-sm cursor-pointer flex-1"
-                  >
-                    {category.name}
-                  </label>
-                </div>
-              ))}
-            </div>
+            {selectedCategories.length === 0 ? (
+              <p className="text-xs text-muted-foreground py-4">
+                No categories available. Please set up your categories first.
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {selectedCategories.map((category) => (
+                  <div key={category.id} className="flex items-center space-x-3 py-2">
+                    <Checkbox
+                      id={category.id}
+                      checked={category.enabled}
+                      onCheckedChange={(checked) => handleCategoryToggle(category.id, checked as boolean)}
+                    />
+                    <label
+                      htmlFor={category.id}
+                      className="text-sm cursor-pointer flex-1"
+                    >
+                      {category.name}
+                    </label>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
 
-      {/* Account-Specific Settings */}
-      {/* <Card className="shadow-card hover:shadow-card-hover transition-all border-border">
-        <CardHeader className="pb-3 pt-5 px-5">
-          <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
-            Account-Specific Settings
-            <HelpCircle className="h-3.5 w-3.5" />
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="px-5 pb-5">
-          <p className="text-xs text-muted-foreground mb-4">
-            Customize draft behavior for each email account. Account-specific prompts override the global prompt.
-          </p>
-          <div className="space-y-3">
-            {accounts.map((account) => (
-              <div
-                key={account.id}
-                className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 rounded-lg hover:bg-muted/50 transition-colors border border-border"
-              >
-                <div className="flex items-center gap-3 flex-1 min-w-0">
-                  <div className={`w-2 h-2 rounded-full flex-shrink-0 ${account.color}`} />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium">{account.name}</p>
-                    <p className="text-xs text-muted-foreground truncate">{account.email}</p>
-                  </div>
-                  {account.customPrompt && (
-                    <Badge variant="secondary" className="text-xs flex-shrink-0">
-                      Custom
-                    </Badge>
-                  )}
-                </div>
-                <div className="flex items-center gap-3 sm:flex-shrink-0">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => openAccountSettings(account)}
-                    className="text-xs h-8 flex-1 sm:flex-none"
-                  >
-                    <Settings className="h-3.5 w-3.5 sm:mr-1.5" />
-                    <span className="hidden sm:inline">Configure</span>
-                  </Button>
-                  <Switch
-                    checked={account.draftsEnabled}
-                    onCheckedChange={(checked) => handleAccountToggle(account.id, checked)}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card> */}
-
-      {/* Global Draft Prompt */}
-      {/* <Card className="shadow-card hover:shadow-card-hover transition-all border-border">
-        <CardHeader className="pb-3 pt-5 px-5">
-          <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
-            Global Draft Prompt
-            <HelpCircle className="h-3.5 w-3.5" />
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="px-5 pb-5">
-          <p className="text-xs text-muted-foreground mb-3">
-            Provide instructions to guide AI in generating draft replies. Include your communication style, priorities, or business context. (max 1000 characters)
-          </p>
-          <Textarea
-            placeholder="Example instructions:
-
-• Keep responses concise and professional
-• Use bullet points for clarity when listing items
-• Always acknowledge requests before providing solutions
-• Maintain a friendly but direct tone
-• Include relevant context from previous conversations"
-            className="min-h-[180px] text-sm resize-none"
-            maxLength={1000}
-            value={globalPrompt}
-            onChange={(e) => setGlobalPrompt(e.target.value)}
-          />
-          <div className="flex items-center justify-between mt-2">
-            <p className="text-xs text-muted-foreground">
-              Character count: {characterCount} / 1000
-            </p>
-            <Button size="sm" variant="outline" className="text-xs">
-              Save Prompt
-            </Button>
-          </div>
-        </CardContent>
-      </Card> */}
-
-      {/* Account-Specific Prompt Dialog */}
-      {/* <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="sm:max-w-[550px]">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-semibold">
-              Configure {selectedAccount?.name}
-            </DialogTitle>
-            <DialogDescription className="text-sm">
-              {selectedAccount?.email}
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <p className="text-sm font-medium">Account-Specific Prompt</p>
-              <p className="text-xs text-muted-foreground mb-3">
-                These instructions will override the global prompt for this account only. Leave empty to use the global prompt.
-              </p>
-              <Textarea
-                placeholder="Example for work account:
-
-• Always include project references
-• CC relevant team members when appropriate
-• Use formal language and company terminology
-• Include action items at the end of emails"
-                className="min-h-[200px] text-sm resize-none"
-                maxLength={1000}
-                value={accountPrompt}
-                onChange={(e) => setAccountPrompt(e.target.value)}
-              />
-              <p className="text-xs text-muted-foreground">
-                Character count: {accountPrompt.length} / 1000
-              </p>
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setDialogOpen(false);
-                setSelectedAccount(null);
-                setAccountPrompt("");
-              }}
-            >
-              Cancel
-            </Button>
-            <Button onClick={saveAccountSettings}>
-              Save Settings
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog> */}
+      {/* Save Button */}
+      <div className="flex justify-end">
+        <Button
+          onClick={handleSave}
+          disabled={isSaving}
+          className="min-w-[120px]"
+        >
+          {isSaving ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Saving...
+            </>
+          ) : (
+            "Save Settings"
+          )}
+        </Button>
+      </div>
     </div>
   );
 };
