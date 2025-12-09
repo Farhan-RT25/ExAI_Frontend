@@ -1,69 +1,72 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+// import { Input } from "@/components/ui/input";
+// import { Label } from "@/components/ui/label";
 import { Link, useNavigate } from "react-router-dom";
-import { Mail, Eye, EyeOff, ArrowLeft, Sparkles, Shield } from "lucide-react";
+import { ArrowLeft, Sparkles, Shield } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { login, saveAuthData } from "@/lib/api/auth";
 import { initiateGoogleLogin } from "@/lib/api/google";
 import { initiateMicrosoftLogin } from "@/lib/api/microsoft";
 import { initiateZohoLogin } from "@/lib/api/zoho";
+import googleLogo from "@/assets/google-logo.png";
+import microsoftLogo from "@/assets/microsoft-logo.png";
+import zohoLogo from "@/assets/zoho-logo.png";
 
 const Login = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  // const [email, setEmail] = useState("");
+  // const [password, setPassword] = useState("");
+  // const [showPassword, setShowPassword] = useState(false);
+  // const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
 
-  const validateForm = () => {
-    const newErrors: Record<string, string> = {};
+  // const validateForm = () => {
+  //   const newErrors: Record<string, string> = {};
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!email || !emailRegex.test(email)) {
-      newErrors.email = "Please enter a valid email address";
-    }
+  //   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  //   if (!email || !emailRegex.test(email)) {
+  //     newErrors.email = "Please enter a valid email address";
+  //   }
 
-    if (!password || password.length < 6) {
-      newErrors.password = "Password must be at least 6 characters";
-    }
+  //   if (!password || password.length < 6) {
+  //     newErrors.password = "Password must be at least 6 characters";
+  //   }
 
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
+  //   setErrors(newErrors);
+  //   return Object.keys(newErrors).length === 0;
+  // };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!validateForm()) return;
+  // const handleSubmit = async (e: React.FormEvent) => {
+  //   e.preventDefault();
+  //   if (!validateForm()) return;
 
-    setIsLoading(true);
+  //   setIsLoading(true);
 
-    try {
-      const authResponse = await login({ email, password });
-      saveAuthData(authResponse);
+  //   try {
+  //     const authResponse = await login({ email, password });
+  //     saveAuthData(authResponse);
 
-      toast({
-        title: "Welcome back!",
-        description: `Hello, ${authResponse.user.full_name || "User"}`,
-      });
+  //     toast({
+  //       title: "Welcome back!",
+  //       description: `Hello, ${authResponse.user.full_name || "User"}`,
+  //     });
 
-      navigate("/dashboard");
-    } catch (error) {
-      toast({
-        title: "Login failed",
-        description:
-          error instanceof Error ? error.message : "Invalid credentials",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  //     navigate("/dashboard");
+  //   } catch (error) {
+  //     toast({
+  //       title: "Login failed",
+  //       description:
+  //         error instanceof Error ? error.message : "Invalid credentials",
+  //       variant: "destructive",
+  //     });
+  //   } finally {
+  //     setIsLoading(false);
+  //   }
+  // };
 
   const handleOAuthLogin = (provider: string) => {
     switch (provider) {
@@ -80,43 +83,44 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-950 via-slate-900 to-gray-950 flex items-center justify-center p-4">
-      {/* Subtle animated background */}
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      {/* Purple Northern Lights Background */}
       <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute -z-10 absolute inset-0 bg-gradient-to-br from-blue-900/20 via-purple-900/10 to-cyan-900/20" />
-        <div className="absolute top-20 left-20 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl animate-pulse" />
-        <div className="absolute bottom-32 right-32 w-80 h-80 bg-purple-600/10 rounded-full blur-3xl animate-pulse delay-1000" />
+        <div className="absolute top-0 left-1/4 w-[600px] h-[500px] bg-gradient-to-b from-purple-500/15 via-violet-600/8 to-transparent blur-[100px] rounded-full aurora-glow" />
+        <div className="absolute top-10 right-1/4 w-[500px] h-[400px] bg-gradient-to-b from-primary/20 via-purple-400/10 to-transparent blur-[120px] rounded-full aurora-shift" />
+        <div className="absolute bottom-20 left-1/3 w-[400px] h-[300px] bg-purple-600/10 blur-[150px] rounded-full aurora-shift" style={{ animationDelay: '4s' }} />
       </div>
 
-      {/* Main Card - Wider & Centered */}
-      <Card className="relative w-full max-w-5xl mx-auto bg-gray-900/70 backdrop-blur-2xl border border-gray-800/60 shadow-2xl overflow-hidden">
-        <div className="grid lg:grid-cols-5 min-h-[680px]">
+      {/* Main Card */}
+      <Card className="relative w-full max-w-5xl mx-auto bg-card/80 backdrop-blur-2xl border border-border/50 shadow-2xl overflow-hidden">
+        <div className="grid lg:grid-cols-5 min-h-[600px]">
           {/* Left: Branding & Hero (40%) */}
-          <div className="hidden lg:flex lg:col-span-2 relative bg-gradient-to-br from-blue-700 via-purple-700 to-violet-800 p-12 flex-col justify-between text-white overflow-hidden">
-            <div className="absolute inset-0 bg-black/20" />
-
+          <div className="hidden lg:flex lg:col-span-2 relative bg-card p-12 flex-col justify-between overflow-hidden border-r border-border/30">
+            {/* Subtle aurora inside card */}
+            <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-primary/10 blur-[100px] rounded-full" />
+            
             <div className="relative z-10">
               <Link
                 to="/"
-                className="inline-flex items-center gap-2 text-white/80 hover:text-white text-sm mb-12 transition-colors"
+                className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground text-sm mb-12 transition-colors"
               >
                 <ArrowLeft className="h-4 w-4" />
                 Back to website
               </Link>
 
               <div className="flex items-center gap-4 mb-10">
-                <div className="w-14 h-14 bg-white/15 rounded-2xl flex items-center justify-center backdrop-blur-md border border-white/20">
-                  <Sparkles className="h-8 w-8" />
+                <div className="w-14 h-14 bg-primary/20 rounded-2xl flex items-center justify-center backdrop-blur-md border border-primary/30">
+                  <Sparkles className="h-8 w-8 text-primary" />
                 </div>
-                <h1 className="text-3xl font-bold tracking-tight">NyxAI</h1>
+                <h1 className="text-3xl font-bold tracking-tight text-foreground">NyxAI</h1>
               </div>
 
-              <h2 className="text-4xl font-bold leading-tight mb-6">
+              <h2 className="text-4xl font-bold leading-tight mb-6 text-foreground">
                 Intelligent Email,
                 <br />
-                <span className="text-cyan-300">Reimagined</span>
+                <span className="text-primary">Reimagined</span>
               </h2>
-              <p className="text-white/80 text-lg leading-relaxed max-w-sm">
+              <p className="text-muted-foreground text-lg leading-relaxed max-w-sm">
                 Let AI organize, prioritize, and respond — so you can focus on
                 what truly matters.
               </p>
@@ -129,9 +133,9 @@ const Login = () => {
                 "Instant Sync",
               ].map((feature) => (
                 <div key={feature} className="flex items-center gap-3">
-                  <div className="w-5 h-5 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 flex items-center justify-center flex-shrink-0">
+                  <div className="w-5 h-5 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center flex-shrink-0">
                     <svg
-                      className="w-3 h-3"
+                      className="w-3 h-3 text-primary"
                       fill="currentColor"
                       viewBox="0 0 20 20"
                     >
@@ -142,7 +146,7 @@ const Login = () => {
                       />
                     </svg>
                   </div>
-                  <span className="text-white/90 text-sm leading-snug">{feature}</span>
+                  <span className="text-muted-foreground text-sm leading-snug">{feature}</span>
                 </div>
               ))}
             </div>
@@ -154,36 +158,37 @@ const Login = () => {
             <div className="lg:hidden mb-5 flex justify-between items-center">
               <Link
                 to="/"
-                className="inline-flex items-center gap-2 text-gray-400 hover:text-gray-200 text-sm mb-0 transition-colors"
+                className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground text-sm mb-0 transition-colors"
               >
                 <ArrowLeft className="h-4 w-4" />
                 Back
               </Link>
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center">
-                  <Sparkles className="h-7 w-7 text-white" />
+                <div className="w-12 h-12 bg-primary/20 rounded-xl flex items-center justify-center">
+                  <Sparkles className="h-7 w-7 text-primary" />
                 </div>
-                <span className="text-2xl font-bold text-white">NyxAI</span>
+                <span className="text-2xl font-bold text-foreground">NyxAI</span>
               </div>
             </div>
 
             <div className="max-w-md mx-auto w-full space-y-8">
               <div>
-                <h2 className="text-3xl font-bold text-white mb-2">Sign in</h2>
-                <p className="text-gray-400">
+                <h2 className="text-3xl font-bold text-foreground mb-2">Sign in</h2>
+                <p className="text-muted-foreground">
                   New here?{" "}
                   <Link
                     to="/signup"
-                    className="text-blue-400 hover:text-blue-300 font-medium transition-colors"
+                    className="text-primary hover:text-primary/80 font-medium transition-colors"
                   >
                     Create an account
                   </Link>
                 </p>
               </div>
 
-              <form onSubmit={handleSubmit} className="space-y-6">
+              {/* Email/Password form commented out */}
+              {/* <form onSubmit={handleSubmit} className="space-y-6">
                 <div>
-                  <Label htmlFor="email" className="text-gray-200 font-medium">
+                  <Label htmlFor="email" className="text-foreground font-medium">
                     Email Address
                   </Label>
                   <Input
@@ -192,11 +197,11 @@ const Login = () => {
                     placeholder="you@company.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="mt-2 h-12 bg-gray-800/50 border-gray-700 text-white placeholder:text-gray-500 focus:border-blue-500 focus:ring-blue-500/30"
+                    className="mt-2 h-12 bg-muted/50 border-border text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-primary/30"
                     disabled={isLoading}
                   />
                   {errors.email && (
-                    <p className="mt-2 text-sm text-red-400">{errors.email}</p>
+                    <p className="mt-2 text-sm text-destructive">{errors.email}</p>
                   )}
                 </div>
 
@@ -204,13 +209,13 @@ const Login = () => {
                   <div className="flex items-center justify-between mb-2">
                     <Label
                       htmlFor="password"
-                      className="text-gray-200 font-medium"
+                      className="text-foreground font-medium"
                     >
                       Password
                     </Label>
                     <Link
                       to="/forgot-password"
-                      className="text-sm text-blue-400 hover:text-blue-300"
+                      className="text-sm text-primary hover:text-primary/80"
                     >
                       Forgot?
                     </Link>
@@ -222,13 +227,13 @@ const Login = () => {
                       placeholder="••••••••"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="h-12 pr-12 bg-gray-800/50 border-gray-700 text-white placeholder:text-gray-500 focus:border-blue-500 focus:ring-blue-500/30"
+                      className="h-12 pr-12 bg-muted/50 border-border text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-primary/30"
                       disabled={isLoading}
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-200"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                     >
                       {showPassword ? (
                         <EyeOff className="h-5 w-5" />
@@ -238,7 +243,7 @@ const Login = () => {
                     </button>
                   </div>
                   {errors.password && (
-                    <p className="mt-2 text-sm text-red-400">
+                    <p className="mt-2 text-sm text-destructive">
                       {errors.password}
                     </p>
                   )}
@@ -246,7 +251,7 @@ const Login = () => {
 
                 <Button
                   type="submit"
-                  className="w-full h-12 text-base font-medium bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white shadow-lg shadow-purple-500/25"
+                  className="w-full h-12 text-base font-medium bg-primary hover:bg-primary/90 text-primary-foreground"
                   disabled={isLoading}
                 >
                   {isLoading ? "Signing in..." : "Sign in"}
@@ -255,70 +260,53 @@ const Login = () => {
 
               <div className="relative my-8">
                 <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-gray-700" />
+                  <div className="w-full border-t border-border" />
                 </div>
                 <div className="relative flex justify-center text-sm">
-                  <span className="px-4 bg-gray-900/70 text-gray-500">
+                  <span className="px-4 bg-card text-muted-foreground">
                     Or continue with
                   </span>
                 </div>
-              </div>
+              </div> */}
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <p className="text-center text-muted-foreground text-sm mb-6">
+                Sign in with your email provider
+              </p>
+
+              {/* OAuth Buttons - Single Column with White Background */}
+              <div className="flex flex-col gap-4">
                 <Button
                   variant="outline"
-                  className="h-12 bg-gray-800/40 border-gray-700 hover:bg-gray-800 hover:border-gray-600 text-white"
+                  className="h-14 bg-white hover:bg-gray-50 border-border text-gray-800 font-medium text-base justify-start px-6"
                   onClick={() => handleOAuthLogin("Google")}
                   disabled={isLoading}
                 >
-                  <svg className="h-5 w-5" viewBox="0 0 24 24">
-                    <path
-                      fill="#4285F4"
-                      d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                    />
-                    <path
-                      fill="#34A853"
-                      d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                    />
-                    <path
-                      fill="#FBBC05"
-                      d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"
-                    />
-                    <path
-                      fill="#EA4335"
-                      d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                    />
-                  </svg>
-                  Google
+                  <img src={googleLogo} alt="Google" className="h-6 w-6 mr-4" />
+                  Continue with Google
                 </Button>
 
                 <Button
                   variant="outline"
-                  className="h-12 bg-gray-800/40 border-gray-700 hover:bg-gray-800 hover:border-gray-600 text-white"
+                  className="h-14 bg-white hover:bg-gray-50 border-border text-gray-800 font-medium text-base justify-start px-6"
                   onClick={() => handleOAuthLogin("Microsoft")}
                   disabled={isLoading}
                 >
-                  <svg className="h-5 w-5" viewBox="0 0 23 23">
-                    <path fill="#f35325" d="M1 1h10v10H1z" />
-                    <path fill="#81bc06" d="M12 1h10v10H12z" />
-                    <path fill="#05a6f0" d="M1 12h10v10H1z" />
-                    <path fill="#ffba08" d="M12 12h10v10H12z" />
-                  </svg>
-                  Microsoft
+                  <img src={microsoftLogo} alt="Microsoft" className="h-6 w-6 mr-4" />
+                  Continue with Microsoft
                 </Button>
 
                 <Button
                   variant="outline"
-                  className="h-12 bg-gray-800/40 border-gray-700 hover:bg-gray-800 hover:border-gray-600 text-white"
+                  className="h-14 bg-white hover:bg-gray-50 border-border text-gray-800 font-medium text-base justify-start px-6"
                   onClick={() => handleOAuthLogin("Zoho")}
                   disabled={isLoading}
                 >
-                  <Mail className="h-5 w-5" />
-                  Zoho
+                  <img src={zohoLogo} alt="Zoho" className="h-6 w-6 mr-4" />
+                  Continue with Zoho
                 </Button>
               </div>
 
-              <p className="text-center text-xs text-gray-500 mt-8">
+              <p className="text-center text-xs text-muted-foreground mt-8">
                 <Shield className="inline-block h-3 w-3 mr-1" />
                 Your data is encrypted end-to-end. We never read your emails.
               </p>
