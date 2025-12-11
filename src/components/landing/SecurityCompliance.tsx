@@ -1,8 +1,9 @@
-import { Lock, FileCheck, Server } from "lucide-react";
+import { Shield, Lock, FileCheck, Server } from "lucide-react";
 import { SectionHeading } from "./SectionHeading";
 import SOCBadge from "@/assets/soc.png";
 import ISOBadge from "@/assets/iso.png";
 import GDPRBadge from "@/assets/gdpr.png";
+import { motion } from "framer-motion";
 
 const securityFeatures = [
   {
@@ -22,154 +23,152 @@ const securityFeatures = [
   },
 ];
 
+const badges = [
+  { image: SOCBadge, title: "SOC 2 Type II", subtitle: "Certified" },
+  { image: ISOBadge, title: "ISO 27001", subtitle: "Certified" },
+  { image: GDPRBadge, title: "GDPR", subtitle: "Compliant" },
+];
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.15,
+    },
+  },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 30 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.6,
+      ease: [0.25, 0.46, 0.45, 0.94] as const,
+    },
+  },
+};
+
+const badgeVariants = {
+  hidden: { opacity: 0, scale: 0.8 },
+  visible: {
+    opacity: 1,
+    scale: 1,
+    transition: {
+      duration: 0.5,
+      ease: [0.25, 0.46, 0.45, 0.94] as const,
+    },
+  },
+};
+
 export const SecurityCompliance = () => {
   return (
     <section id="security-compliance" className="py-24 md:py-32 bg-background relative overflow-hidden">
+      {/* Subtle grid background */}
+      <div 
+        className="absolute inset-0 opacity-[0.03]"
+        style={{
+          backgroundImage: `linear-gradient(hsl(var(--primary)) 1px, transparent 1px),
+                           linear-gradient(90deg, hsl(var(--primary)) 1px, transparent 1px)`,
+          backgroundSize: '60px 60px',
+        }}
+      />
+      
       {/* Subtle ambient lighting */}
       <div className="absolute top-1/3 left-1/4 w-[400px] h-[400px] bg-primary/5 blur-[150px] rounded-full pointer-events-none" />
       <div className="absolute bottom-1/3 right-1/4 w-[400px] h-[400px] bg-purple-600/5 blur-[150px] rounded-full pointer-events-none" />
       
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-        <SectionHeading
-          badge="Security & Compliance"
-          title="Enterprise-Grade Security"
-          description="Your data security is our top priority. We implement industry-leading security measures to protect your sensitive information."
-        />
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-100px" }}
+          transition={{ duration: 0.6 }}
+        >
+          <SectionHeading
+            badge="Security & Compliance"
+            title="Enterprise-Grade Security"
+            description="Your data security is our top priority. We implement industry-leading security measures to protect your sensitive information."
+          />
+        </motion.div>
 
-        {/* 3D Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-7xl mx-auto mt-16">
+        {/* Security Features Grid */}
+        <motion.div 
+          className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 max-w-6xl mx-auto mt-16"
+          variants={containerVariants}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: "-100px" }}
+        >
           {securityFeatures.map((feature, index) => {
             const Icon = feature.icon;
             
             return (
-              <div
+              <motion.div
                 key={index}
+                variants={itemVariants}
                 className="group relative"
               >
-                {/* Card */}
-                <div 
-                  className="relative bg-gradient-to-br from-[#1a1a2e] to-[#0f0f1e] border border-primary/20 rounded-2xl p-8 h-[450px] transition-all duration-500 ease-out group-hover:border-primary/40 overflow-hidden"
-                >
-                  {/* Grid overlay */}
-                  <div 
-                    className="absolute inset-0 opacity-20"
-                    style={{
-                      backgroundImage: `
-                        linear-gradient(${index === 0 ? '#a78bfa' : index === 1 ? '#009773' : '#4a4453'}40 1px, transparent 1px),
-                        linear-gradient(90deg, ${index === 0 ? '#a78bfa' : index === 1 ? '#009773' : '#4a4453'}40 1px, transparent 1px)
-                      `,
-                      backgroundSize: '20px 20px',
-                    }}
-                  />
-
-                  {/* 3D Image Container */}
-                  <div className="relative h-48 mb-6 flex items-center justify-center">
-                    {/* Background glow */}
-                    <div 
-                      className="absolute inset-0 rounded-xl opacity-30 blur-2xl"
-                      style={{
-                        background: `radial-gradient(circle at center, ${
-                          index === 0 ? '#a78bfa' : index === 1 ? '#009773' : '#4a4453'
-                        }60 0%, transparent 70%)`,
-                      }}
-                    />
-                    
-                    {/* 3D Icon representation */}
-                    <div 
-                      className="relative z-10 w-32 h-32 flex items-center justify-center group-hover:scale-110 transition-transform duration-500"
-                      style={{
-                        transform: 'perspective(800px) rotateY(-15deg) rotateX(10deg)',
-                      }}
-                    >
-                      {/* Icon platform */}
-                      <div 
-                        className="absolute inset-0 rounded-2xl"
-                        style={{
-                          background: `linear-gradient(135deg, ${
-                            index === 0 ? '#a78bfa' : index === 1 ? '#009773' : '#4a4453'
-                          }40, ${
-                            index === 0 ? '#a78bfa' : index === 1 ? '#009773' : '#4a4453'
-                          }10)`,
-                          boxShadow: `0 10px 40px ${
-                            index === 0 ? '#a78bfa' : index === 1 ? '#009773' : '#4a4453'
-                          }30`,
-                        }}
-                      />
-                      <Icon 
-                        className="relative z-10 w-16 h-16"
-                        style={{
-                          color: index === 0 ? '#a78bfa' : index === 1 ? '#009773' : '#4a4453',
-                          filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.3))',
-                        }}
-                      />
-                      
-                      {/* Grid lines on icon */}
-                      <div 
-                        className="absolute inset-0 rounded-2xl opacity-40"
-                        style={{
-                          backgroundImage: `
-                            linear-gradient(${index === 0 ? '#a78bfa' : index === 1 ? '#009773' : '#4a4453'} 1px, transparent 1px),
-                            linear-gradient(90deg, ${index === 0 ? '#a78bfa' : index === 1 ? '#009773' : '#4a4453'} 1px, transparent 1px)
-                          `,
-                          backgroundSize: '16px 16px',
-                        }}
-                      />
-                    </div>
+                <div className="relative bg-card/50 backdrop-blur-sm border border-border/50 rounded-2xl p-8 h-full transition-all duration-300 hover:border-primary/30 hover:bg-card/70">
+                  {/* Icon */}
+                  <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center mb-6 group-hover:bg-primary/20 transition-colors duration-300">
+                    <Icon className="w-7 h-7 text-primary" />
                   </div>
 
                   {/* Content */}
-                  <div className="relative z-10">
-                    {/* Title */}
-                    <h3 className="text-2xl font-bold mb-4 text-white group-hover:text-primary transition-colors duration-300">
-                      {feature.title}
-                    </h3>
-
-                    {/* Description */}
-                    <p className="text-gray-400 leading-relaxed text-sm">
-                      {feature.description}
-                    </p>
-                  </div>
-
-                  {/* Bottom accent line */}
-                  <div 
-                    className="absolute bottom-0 left-0 right-0 h-1"
-                    style={{
-                      background: `linear-gradient(90deg, transparent, ${
-                        index === 0 ? '#a78bfa' : index === 1 ? '#009773' : '#4a4453'
-                      }, transparent)`,
-                    }}
-                  />
+                  <h3 className="text-xl font-semibold mb-3 text-foreground group-hover:text-primary transition-colors duration-300">
+                    {feature.title}
+                  </h3>
+                  <p className="text-muted-foreground text-sm leading-relaxed">
+                    {feature.description}
+                  </p>
                 </div>
-
-                {/* Glow effect on hover */}
-                <div 
-                  className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 -z-10 blur-xl"
-                  style={{
-                    background: `radial-gradient(circle at 50% 50%, ${
-                      index === 0 ? '#a78bfa' : index === 1 ? '#009773' : '#4a4453'
-                    }30 0%, transparent 70%)`,
-                  }}
-                />
-              </div>
+              </motion.div>
             );
           })}
-        </div>
+        </motion.div>
 
-        {/* Bottom trust badges */}
-        <div className="flex flex-wrap items-center justify-center gap-12 mt-20">
-          <div className="group flex flex-col items-center gap-3 px-6 py-4 rounded-lg transition-all hover:bg-primary/5">
-            <img src={SOCBadge} alt="SOC 2 Type II Certified" className="h-20 w-20 object-contain group-hover:scale-110 transition-transform duration-300" />
-            <span className="text-xs font-medium text-muted-foreground">SOC 2 Type II</span>
+        {/* Trust Badges */}
+        <motion.div 
+          className="mt-20"
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: "-50px" }}
+          variants={containerVariants}
+        >
+          <motion.div 
+            className="flex items-center justify-center gap-3 mb-8"
+            variants={itemVariants}
+          >
+            <Shield className="w-5 h-5 text-primary" />
+            <span className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Trusted & Certified</span>
+          </motion.div>
+          
+          <div className="flex flex-wrap items-center justify-center gap-6 md:gap-10">
+            {badges.map((badge, index) => (
+              <motion.div
+                key={index}
+                variants={badgeVariants}
+                className="group flex items-center gap-4 px-6 py-4 rounded-xl bg-card/30 border border-border/30 hover:border-primary/30 hover:bg-card/50 transition-all duration-300"
+              >
+                <div className="w-16 h-16 rounded-lg bg-background/50 flex items-center justify-center p-2 group-hover:bg-background/80 transition-colors duration-300">
+                  <img 
+                    src={badge.image} 
+                    alt={`${badge.title} ${badge.subtitle}`} 
+                    className="w-full h-full object-contain"
+                    loading="lazy"
+                  />
+                </div>
+                <div className="text-left">
+                  <div className="text-sm font-semibold text-foreground">{badge.title}</div>
+                  <div className="text-xs text-muted-foreground">{badge.subtitle}</div>
+                </div>
+              </motion.div>
+            ))}
           </div>
-          <div className="group flex flex-col items-center gap-3 px-6 py-4 rounded-lg transition-all hover:bg-primary/5">
-            <img src={ISOBadge} alt="ISO 27001 Certified" className="h-20 w-20 object-contain group-hover:scale-110 transition-transform duration-300" />
-            <span className="text-xs font-medium text-muted-foreground">ISO 27001</span>
-          </div>
-          <div className="group flex flex-col items-center gap-3 px-6 py-4 rounded-lg transition-all hover:bg-primary/5">
-            <img src={GDPRBadge} alt="GDPR Compliant" className="h-20 w-20 object-contain group-hover:scale-110 transition-transform duration-300" />
-            <span className="text-xs font-medium text-muted-foreground">GDPR Compliant</span>
-          </div>
-        </div>
+        </motion.div>
       </div>
     </section>
   );

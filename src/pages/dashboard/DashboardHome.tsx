@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Mail, Clock, TrendingUp, MessageSquare, HelpCircle, ChevronDown, Check, ArrowUp, ArrowDown, Zap, CheckCircle2, Sparkles, BarChart3 } from "lucide-react";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Mail, Clock, TrendingUp, MessageSquare, HelpCircle, ChevronDown, Check, Zap, CheckCircle2, Sparkles, BarChart3 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,6 +9,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import StatCard from "@/components/StatCard";
+
 import { getProfile, getAccessToken, type User } from "@/lib/api/auth";
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend, CartesianGrid } from 'recharts';
 import { 
@@ -25,47 +26,13 @@ import {
 
 // Icon mapping for KPI metrics
 const iconMap: Record<string, any> = {
-  Mail,
-  Clock,
-  CheckCircle2,
-  TrendingUp,
-  MessageSquare,
-  HelpCircle
-};
-
-// Counter animation component
-const AnimatedCounter = ({ value, suffix = "" }: { value: number; suffix?: string }) => {
-  const [count, setCount] = useState(0);
-
-  useEffect(() => {
-    const duration = 1000;
-    const steps = 100;
-    const increment = value / steps;
-    let current = 0;
-    
-    const timer = setInterval(() => {
-      current += increment;
-      if (current >= value) {
-        setCount(value);
-        clearInterval(timer);
-      } else {
-        setCount(current);
-      }
-    }, duration / steps);
-
-    return () => clearInterval(timer);
-  }, [value]);
-
-  const displayValue = suffix === "%" || suffix === "h" 
-    ? count.toFixed(1)
-    : Math.floor(count).toLocaleString();
-
-  return (
-    <span>
-      {displayValue}
-      {suffix}
-    </span>
-  );
+  Mail: <Mail className="h-5 w-5" />,
+  Clock: <Clock className="h-5 w-5" />,
+  CheckCircle2: <CheckCircle2 className="h-5 w-5" />,
+  TrendingUp: <TrendingUp className="h-5 w-5" />,
+  MessageSquare: <MessageSquare className="h-5 w-5" />,
+  HelpCircle: <HelpCircle className="h-5 w-5" />,
+  Zap: <Zap className="h-5 w-5" />
 };
 
 const DashboardHome = () => {
@@ -93,7 +60,6 @@ const DashboardHome = () => {
       setError(null);
       console.log("Fetching dashboard data for account:", accountId || "all");
       
-      // Fetch all dashboard data
       const data = await getDashboardData(accountId);
       
       console.log("Dashboard data received:", data);
@@ -111,7 +77,6 @@ const DashboardHome = () => {
       const errorMessage = err instanceof Error ? err.message : "Failed to load dashboard data";
       setError(errorMessage);
       
-      // Set default/empty data to prevent UI errors
       if (emailAccounts.length === 0) {
         setEmailAccounts([{ id: "all", name: "All Accounts", email: "", color: "bg-gradient-primary" }]);
       }
@@ -132,7 +97,6 @@ const DashboardHome = () => {
         const profile = await getProfile(token);
         setUser(profile);
         
-        // Fetch dashboard data after profile is loaded
         await fetchDashboardData();
       } catch (err) {
         console.error("Failed to fetch user profile:", err);
@@ -143,7 +107,6 @@ const DashboardHome = () => {
           try {
             setUser(JSON.parse(storedUser));
             setError(null);
-            // Still try to fetch dashboard data
             await fetchDashboardData();
           } catch {
             // Ignore parse error
@@ -157,7 +120,6 @@ const DashboardHome = () => {
     fetchUserProfile();
   }, []);
 
-  // Refetch data when account changes
   useEffect(() => {
     if (!loading) {
       const accountId = selectedAccount === "all" ? undefined : selectedAccount;
@@ -180,7 +142,6 @@ const DashboardHome = () => {
     return "there";
   };
 
-  // Show error message if API is not configured
   if (error && error.includes("API base URL is not configured")) {
     return (
       <div className="space-y-6">
@@ -225,8 +186,8 @@ const DashboardHome = () => {
           <DropdownMenuTrigger asChild>
             <Button variant="outline" className="w-full sm:w-auto sm:min-w-[240px] justify-between h-11">
               <div className="flex items-center gap-3">
-                <div className={`w-2 h-2 rounded-full ${currentAccount.color}`} />
-                <span className="text-sm font-medium">{currentAccount.name}</span>
+                <div className={`w-2 h-2 rounded-full ${currentAccount?.color}`} />
+                <span className="text-sm font-medium">{currentAccount?.name}</span>
               </div>
               <ChevronDown className="h-4 w-4 opacity-50" />
             </Button>
@@ -249,63 +210,33 @@ const DashboardHome = () => {
         </DropdownMenu>
       </div>
 
-      {/* KPI Cards - Medical Dashboard Style */}
+      {/* KPI Cards - Using StatCard Component */}
       {kpi.length > 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {kpi.map((kpiItem, index) => {
-            const Icon = iconMap[kpiItem.icon] || Mail;
+            const Icon = iconMap[kpiItem.icon] || <Mail className="h-5 w-5" />;
+            
+            // Parse the change percentage for the progress bar
+            const changePercent = kpiItem.change ? 
+              parseInt(kpiItem.change.replace(/[^0-9]/g, '')) || 0 : 0;
             
             return (
-              <Card 
-                key={index} 
-                className="relative overflow-hidden border-l-[6px] transition-all duration-700 group cursor-pointer bg-card"
-                style={{ borderLeftColor: kpiItem.color }}
-              >
-                {/* Wave animation background */}
-                <div 
-                  className="absolute bottom-0 right-0 w-full h-[40%] rounded-full transition-all duration-700 ease-in-out group-hover:scale-[7] group-hover:translate-x-[-20px]"
-                  style={{ 
-                    backgroundColor: kpiItem.color,
-                    transform: 'translateY(70px)',
-                  }}
-                />
-                
-                <CardHeader className="flex flex-row items-start justify-between pb-2 pt-5 px-5 relative z-10">
-                  <div className="flex-1">
-                    <CardTitle className="text-sm font-medium text-muted-foreground mb-3 transition-colors duration-700">
-                      {kpiItem.title}
-                    </CardTitle>
-                    <div className="text-3xl font-bold tracking-tight mb-2 transition-colors duration-700">
-                      <AnimatedCounter value={kpiItem.value} suffix={kpiItem.suffix || ""} />
-                    </div>
-                    {kpiItem.change && (
-                      <div className="flex items-center gap-1">
-                        {kpiItem.trend === "up" ? (
-                          <ArrowUp className="h-3 w-3 transition-colors duration-700" style={{ color: kpiItem.color }} />
-                        ) : (
-                          <ArrowDown className="h-3 w-3 transition-colors duration-700" style={{ color: kpiItem.color }} />
-                        )}
-                        <span className="text-xs font-medium transition-colors duration-700" style={{ color: kpiItem.color }}>
-                          {kpiItem.change}
-                        </span>
-                        <span className="text-xs text-muted-foreground transition-colors duration-700">vs last month</span>
-                      </div>
-                    )}
-                  </div>
-                  <div 
-                    className="p-3 rounded-xl transition-all duration-700"
-                    style={{ backgroundColor: kpiItem.color }}
-                  >
-                    <Icon className="h-5 w-5 text-white transition-all duration-700" />
-                  </div>
-                </CardHeader>
-              </Card>
+              <StatCard
+                key={index}
+                icon={Icon}
+                title={kpiItem.title}
+                value={kpiItem.value}
+                suffix={kpiItem.suffix || ""}
+                percent={changePercent}
+                trendDirection={kpiItem.trend === "up" ? "up" : "down"}
+                color={kpiItem.color}
+              />
             );
           })}
         </div>
       ) : !loading && (
         <div className="text-center py-8 text-muted-foreground">
-          {/* <p>No data available. Please check your connection and try again.</p> */}
+          {/* No data message */}
         </div>
       )}
 
@@ -313,7 +244,6 @@ const DashboardHome = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* AI Insights Card */}
         <Card className="border-2 hover:border-primary/50 transition-all shadow-card relative overflow-hidden">
-          {/* Gradient background similar to first image */}
           <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-[#009773]/5 pointer-events-none" />
           
           <CardHeader className="pb-4 pt-6 px-6 relative z-10">
@@ -326,7 +256,6 @@ const DashboardHome = () => {
             </div>
           </CardHeader>
           <CardContent className="px-6 pb-6 relative z-10">
-            {/* Main insight with glow effect */}
             {mainInsight && (
               <div className="mb-6 p-6 rounded-2xl bg-gradient-to-br from-primary/10 to-[#009773]/10 border border-primary/20 relative">
                 <div className="absolute top-4 right-4">
@@ -340,7 +269,6 @@ const DashboardHome = () => {
               </div>
             )}
 
-            {/* Additional insights */}
             <div className="space-y-3">
               {aiInsights.map((insight, index) => (
                 <div 
@@ -382,44 +310,44 @@ const DashboardHome = () => {
             {volumeData.length > 0 ? (
               <ResponsiveContainer width="100%" height={250}>
                 <LineChart data={volumeData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
-                <XAxis 
-                  dataKey="month" 
-                  stroke="hsl(var(--muted-foreground))"
-                  fontSize={12}
-                  tickLine={false}
-                />
-                <YAxis 
-                  stroke="hsl(var(--muted-foreground))"
-                  fontSize={12}
-                  tickLine={false}
-                />
-                <Tooltip 
-                  contentStyle={{
-                    backgroundColor: 'hsl(var(--card))',
-                    border: '1px solid hsl(var(--border))',
-                    borderRadius: '8px',
-                    fontSize: '12px'
-                  }}
-                />
-                <Line 
-                  type="monotone" 
-                  dataKey="emails" 
-                  stroke="#a78bfa" 
-                  strokeWidth={3}
-                  dot={{ fill: '#a78bfa', r: 4 }}
-                  activeDot={{ r: 6 }}
-                />
-                <Line 
-                  type="monotone" 
-                  dataKey="responded" 
-                  stroke="#009773" 
-                  strokeWidth={3}
-                  dot={{ fill: '#009773', r: 4 }}
-                  activeDot={{ r: 6 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
+                  <XAxis 
+                    dataKey="month" 
+                    stroke="hsl(var(--muted-foreground))"
+                    fontSize={12}
+                    tickLine={false}
+                  />
+                  <YAxis 
+                    stroke="hsl(var(--muted-foreground))"
+                    fontSize={12}
+                    tickLine={false}
+                  />
+                  <Tooltip 
+                    contentStyle={{
+                      backgroundColor: 'hsl(var(--card))',
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: '8px',
+                      fontSize: '12px'
+                    }}
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="emails" 
+                    stroke="#a78bfa" 
+                    strokeWidth={3}
+                    dot={{ fill: '#a78bfa', r: 4 }}
+                    activeDot={{ r: 6 }}
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="responded" 
+                    stroke="#009773" 
+                    strokeWidth={3}
+                    dot={{ fill: '#009773', r: 4 }}
+                    activeDot={{ r: 6 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
             ) : (
               <div className="h-[250px] flex items-center justify-center text-muted-foreground">
                 <p>No email data available yet</p>
@@ -446,23 +374,23 @@ const DashboardHome = () => {
                     cy="50%"
                     innerRadius={70}
                     outerRadius={100}
-                    paddingAngle={3}
+                    paddingAngle={1}
                     dataKey="value"
                   >
                     {categoryData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
-                <Tooltip 
-                  contentStyle={{
-                    backgroundColor: 'hsl(var(--card))',
-                    border: '1px solid hsl(var(--border))',
-                    borderRadius: '8px',
-                    fontSize: '12px'
-                  }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
+                  <Tooltip 
+                    contentStyle={{
+                      backgroundColor: 'hsl(var(--card))',
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: '8px',
+                      fontSize: '12px'
+                    }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
             ) : (
               <div className="h-[300px] flex items-center justify-center text-muted-foreground">
                 <p>No categories selected yet. Complete onboarding to see category distribution.</p>
@@ -494,36 +422,37 @@ const DashboardHome = () => {
             {spendingData.length > 0 ? (
               <ResponsiveContainer width="100%" height={300}>
                 <BarChart data={spendingData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
-                <XAxis 
-                  dataKey="category" 
-                  stroke="hsl(var(--muted-foreground))"
-                  fontSize={12}
-                  tickLine={false}
-                />
-                <YAxis 
-                  stroke="hsl(var(--muted-foreground))"
-                  fontSize={12}
-                  tickLine={false}
-                />
-                <Tooltip 
-                  contentStyle={{
-                    backgroundColor: 'hsl(var(--card))',
-                    border: '1px solid hsl(var(--border))',
-                    borderRadius: '8px',
-                    fontSize: '12px'
-                  }}
-                />
-                <Bar 
-                  dataKey="amount" 
-                  radius={[8, 8, 0, 0]}
-                >
-                  {spendingData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
+                  <XAxis 
+                    dataKey="category" 
+                    stroke="hsl(var(--muted-foreground))"
+                    fontSize={12}
+                    tickLine={false}
+                  />
+                  <YAxis 
+                    stroke="hsl(var(--muted-foreground))"
+                    fontSize={12}
+                    tickLine={false}
+                  />
+                  <Tooltip 
+                    contentStyle={{
+                      backgroundColor: 'hsl(var(--card))',
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: '8px',
+                      fontSize: '12px',
+                      boxShadow: "1px 2px 3px rgba(0, 0, 0, 0.62), inset 0px -2px 3px rgba(0, 0, 0, 0.48), inset 1px 1px 4px #ffffff, rgba(50, 50, 93, 0.25) 0px 13px 27px -5px, rgba(0, 0, 0, 0.3) 0px 8px 16px -8px"
+                    }}
+                  />
+                  <Bar 
+                    dataKey="amount" 
+                    radius={[8, 8, 0, 0]}
+                  >
+                    {spendingData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
             ) : (
               <div className="h-[300px] flex items-center justify-center text-muted-foreground">
                 <p>No processing data available yet</p>

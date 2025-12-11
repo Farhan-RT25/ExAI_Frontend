@@ -1,17 +1,36 @@
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Upload, CreditCard, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { getUserProfile, updateProfile, changePassword, type ProfileUpdateRequest, type PasswordChangeRequest } from "@/lib/api/settings";
+import {
+  getUserProfile,
+  updateProfile,
+  changePassword,
+  type ProfileUpdateRequest,
+  type PasswordChangeRequest,
+} from "@/lib/api/settings";
 import { getUser, saveAuthData } from "@/lib/api/auth";
 import type { User } from "@/lib/api/auth";
+import ProfilePattern from "@/components/ProfilePattern";
 
 const Settings = () => {
   const { toast } = useToast();
@@ -19,11 +38,11 @@ const Settings = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [user, setUser] = useState<User | null>(null);
-  
+
   // Profile form state
   const [fullName, setFullName] = useState("");
   const [profileImageUrl, setProfileImageUrl] = useState("");
-  
+
   // Password change form state
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -44,7 +63,8 @@ const Settings = () => {
       console.error("Failed to load profile:", error);
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to load profile",
+        description:
+          error instanceof Error ? error.message : "Failed to load profile",
         variant: "destructive",
       });
       // Fallback to stored user data
@@ -69,7 +89,7 @@ const Settings = () => {
       if (profileImageUrl !== user?.profile_image_url) {
         updateData.profile_image_url = profileImageUrl;
       }
-      
+
       if (Object.keys(updateData).length === 0) {
         toast({
           title: "No changes",
@@ -80,17 +100,17 @@ const Settings = () => {
 
       const updatedUser = await updateProfile(updateData);
       setUser(updatedUser);
-      
+
       // Update stored user data
-      const token = localStorage.getItem('access_token');
+      const token = localStorage.getItem("access_token");
       if (token) {
         saveAuthData({
           access_token: token,
-          token_type: 'bearer',
-          user: updatedUser
+          token_type: "bearer",
+          user: updatedUser,
         });
       }
-      
+
       toast({
         title: "Success",
         description: "Profile updated successfully",
@@ -99,7 +119,8 @@ const Settings = () => {
       console.error("Failed to update profile:", error);
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to update profile",
+        description:
+          error instanceof Error ? error.message : "Failed to update profile",
         variant: "destructive",
       });
     } finally {
@@ -132,14 +153,14 @@ const Settings = () => {
         current_password: currentPassword,
         new_password: newPassword,
       };
-      
+
       await changePassword(passwordData);
-      
+
       toast({
         title: "Success",
         description: "Password changed successfully",
       });
-      
+
       // Reset form
       setCurrentPassword("");
       setNewPassword("");
@@ -148,7 +169,8 @@ const Settings = () => {
       console.error("Failed to change password:", error);
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to change password",
+        description:
+          error instanceof Error ? error.message : "Failed to change password",
         variant: "destructive",
       });
     } finally {
@@ -205,7 +227,7 @@ const Settings = () => {
     <div className="space-y-4 md:space-y-6">
       {/* Header Card with User Info */}
       <Card className="shadow-card border-border overflow-hidden">
-        <div className="bg-gradient-to-r from-cyan-500 to-blue-500 h-32 relative">
+          <ProfilePattern />
           <div className="absolute -bottom-12 left-8">
             <Avatar className="h-24 w-24 border-4 border-background">
               <AvatarImage src={user.profile_image_url || ""} />
@@ -214,7 +236,6 @@ const Settings = () => {
               </AvatarFallback>
             </Avatar>
           </div>
-        </div>
         <div className="pt-16 pb-6 px-8">
           <h2 className="text-xl font-semibold">{user.full_name || "User"}</h2>
           <p className="text-sm text-muted-foreground">{user.email}</p>
@@ -269,24 +290,30 @@ const Settings = () => {
         <div className="space-y-4 md:space-y-6">
           <Card className="shadow-card hover:shadow-card-hover transition-all border-border">
             <CardHeader className="pb-3 pt-5 px-5">
-              <CardTitle className="text-sm font-medium">User Information</CardTitle>
+              <CardTitle className="text-sm font-medium">
+                User Information
+              </CardTitle>
               <CardDescription className="text-xs">
                 Update your personal information
               </CardDescription>
             </CardHeader>
             <CardContent className="px-5 pb-5 space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="fullname" className="text-sm">Full name</Label>
-                <Input 
-                  id="fullname" 
+                <Label htmlFor="fullname" className="text-sm">
+                  Full name
+                </Label>
+                <Input
+                  id="fullname"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
-                  className="text-sm" 
+                  className="text-sm"
                   placeholder="Enter your full name"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-sm">Email address</Label>
+                <Label htmlFor="email" className="text-sm">
+                  Email address
+                </Label>
                 <div className="flex gap-2">
                   <Input
                     id="email"
@@ -301,11 +328,7 @@ const Settings = () => {
                 </p>
               </div>
               <div className="flex justify-end pt-2">
-                <Button 
-                  onClick={handleSaveProfile}
-                  disabled={saving}
-                  size="sm"
-                >
+                <Button onClick={handleSaveProfile} disabled={saving} size="sm">
                   {saving ? (
                     <>
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -321,7 +344,9 @@ const Settings = () => {
 
           <Card className="shadow-card hover:shadow-card-hover transition-all border-border">
             <CardHeader className="pb-3 pt-5 px-5">
-              <CardTitle className="text-sm font-medium">Profile Image</CardTitle>
+              <CardTitle className="text-sm font-medium">
+                Profile Image
+              </CardTitle>
             </CardHeader>
             <CardContent className="px-5 pb-5">
               <div className="flex items-center gap-4">
@@ -332,23 +357,25 @@ const Settings = () => {
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex gap-2">
-                  <Button 
-                    size="sm" 
+                  <Button
+                    size="sm"
                     className="text-xs"
                     onClick={async () => {
                       const url = prompt("Enter image URL:");
                       if (url && url.trim()) {
                         try {
                           setSaving(true);
-                          const updatedUser = await updateProfile({ profile_image_url: url.trim() });
+                          const updatedUser = await updateProfile({
+                            profile_image_url: url.trim(),
+                          });
                           setProfileImageUrl(url.trim());
                           setUser(updatedUser);
-                          const token = localStorage.getItem('access_token');
+                          const token = localStorage.getItem("access_token");
                           if (token) {
                             saveAuthData({
                               access_token: token,
-                              token_type: 'bearer',
-                              user: updatedUser
+                              token_type: "bearer",
+                              user: updatedUser,
                             });
                           }
                           toast({
@@ -358,7 +385,10 @@ const Settings = () => {
                         } catch (error) {
                           toast({
                             title: "Error",
-                            description: error instanceof Error ? error.message : "Failed to update image",
+                            description:
+                              error instanceof Error
+                                ? error.message
+                                : "Failed to update image",
                             variant: "destructive",
                           });
                         } finally {
@@ -381,9 +411,9 @@ const Settings = () => {
                     )}
                   </Button>
                   {profileImageUrl && (
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
+                    <Button
+                      variant="outline"
+                      size="sm"
                       className="text-xs"
                       onClick={async () => {
                         try {
@@ -392,12 +422,12 @@ const Settings = () => {
                           setProfileImageUrl("");
                           const updatedUser = await getUserProfile();
                           setUser(updatedUser);
-                          const token = localStorage.getItem('access_token');
+                          const token = localStorage.getItem("access_token");
                           if (token) {
                             saveAuthData({
                               access_token: token,
-                              token_type: 'bearer',
-                              user: updatedUser
+                              token_type: "bearer",
+                              user: updatedUser,
                             });
                           }
                           toast({
@@ -407,7 +437,10 @@ const Settings = () => {
                         } catch (error) {
                           toast({
                             title: "Error",
-                            description: error instanceof Error ? error.message : "Failed to remove image",
+                            description:
+                              error instanceof Error
+                                ? error.message
+                                : "Failed to remove image",
                             variant: "destructive",
                           });
                         } finally {
@@ -426,14 +459,18 @@ const Settings = () => {
 
           <Card className="shadow-card hover:shadow-card-hover transition-all border-border">
             <CardHeader className="pb-3 pt-5 px-5">
-              <CardTitle className="text-sm font-medium">Change Password</CardTitle>
+              <CardTitle className="text-sm font-medium">
+                Change Password
+              </CardTitle>
               <CardDescription className="text-xs">
                 Update your password to keep your account secure
               </CardDescription>
             </CardHeader>
             <CardContent className="px-5 pb-5 space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="current-password" className="text-sm">Current Password</Label>
+                <Label htmlFor="current-password" className="text-sm">
+                  Current Password
+                </Label>
                 <Input
                   id="current-password"
                   type="password"
@@ -444,7 +481,9 @@ const Settings = () => {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="new-password" className="text-sm">New Password</Label>
+                <Label htmlFor="new-password" className="text-sm">
+                  New Password
+                </Label>
                 <Input
                   id="new-password"
                   type="password"
@@ -455,7 +494,9 @@ const Settings = () => {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="confirm-password" className="text-sm">Confirm New Password</Label>
+                <Label htmlFor="confirm-password" className="text-sm">
+                  Confirm New Password
+                </Label>
                 <Input
                   id="confirm-password"
                   type="password"
@@ -466,9 +507,14 @@ const Settings = () => {
                 />
               </div>
               <div className="flex justify-end pt-2">
-                <Button 
+                <Button
                   onClick={handleChangePassword}
-                  disabled={saving || !currentPassword || !newPassword || !confirmPassword}
+                  disabled={
+                    saving ||
+                    !currentPassword ||
+                    !newPassword ||
+                    !confirmPassword
+                  }
                   size="sm"
                 >
                   {saving ? (
@@ -486,7 +532,9 @@ const Settings = () => {
 
           <Card className="shadow-card hover:shadow-card-hover transition-all border-border">
             <CardHeader className="pb-3 pt-5 px-5">
-              <CardTitle className="text-sm font-medium">Account Information</CardTitle>
+              <CardTitle className="text-sm font-medium">
+                Account Information
+              </CardTitle>
             </CardHeader>
             <CardContent className="px-5 pb-5 space-y-4">
               <div className="flex items-center justify-between py-3 border-b border-border">
@@ -503,7 +551,10 @@ const Settings = () => {
               </div>
               <div className="flex items-center justify-between py-3 border-b border-border">
                 <span className="text-sm font-medium">Account Status</span>
-                <Badge variant={user.status === 'active' ? 'default' : 'secondary'} className="text-xs">
+                <Badge
+                  variant={user.status === "active" ? "default" : "secondary"}
+                  className="text-xs"
+                >
                   {user.status}
                 </Badge>
               </div>
@@ -517,14 +568,20 @@ const Settings = () => {
         <div className="space-y-4 md:space-y-6">
           <Card className="shadow-card hover:shadow-card-hover transition-all border-border">
             <CardHeader className="pb-3 pt-5 px-5">
-              <CardTitle className="text-sm font-medium">General Settings</CardTitle>
-              <CardDescription className="text-xs">Configure your application preferences</CardDescription>
+              <CardTitle className="text-sm font-medium">
+                General Settings
+              </CardTitle>
+              <CardDescription className="text-xs">
+                Configure your application preferences
+              </CardDescription>
             </CardHeader>
             <CardContent className="px-5 pb-5 space-y-4">
               <div className="flex items-center justify-between py-3 border-b border-border">
                 <div className="space-y-0.5">
                   <label className="text-sm font-medium">Language</label>
-                  <p className="text-xs text-muted-foreground">Select your preferred language</p>
+                  <p className="text-xs text-muted-foreground">
+                    Select your preferred language
+                  </p>
                 </div>
                 <Select defaultValue="english">
                   <SelectTrigger className="w-[180px] text-sm">
@@ -534,7 +591,10 @@ const Settings = () => {
                     <SelectItem value="english">English</SelectItem>
                     <SelectItem value="arabic" disabled>
                       <div className="flex items-center gap-2">
-                        Arabic <Badge variant="secondary" className="ml-2 text-xs">Coming Soon</Badge>
+                        Arabic{" "}
+                        <Badge variant="secondary" className="ml-2 text-xs">
+                          Coming Soon
+                        </Badge>
                       </div>
                     </SelectItem>
                   </SelectContent>
@@ -544,7 +604,9 @@ const Settings = () => {
               <div className="flex items-center justify-between py-3 border-b border-border">
                 <div className="space-y-0.5">
                   <label className="text-sm font-medium">Timezone</label>
-                  <p className="text-xs text-muted-foreground">Set your local timezone</p>
+                  <p className="text-xs text-muted-foreground">
+                    Set your local timezone
+                  </p>
                 </div>
                 <Select defaultValue="utc">
                   <SelectTrigger className="w-[180px] text-sm">
@@ -562,7 +624,9 @@ const Settings = () => {
               <div className="flex items-center justify-between py-3">
                 <div className="space-y-0.5">
                   <label className="text-sm font-medium">Date Format</label>
-                  <p className="text-xs text-muted-foreground">Choose how dates are displayed</p>
+                  <p className="text-xs text-muted-foreground">
+                    Choose how dates are displayed
+                  </p>
                 </div>
                 <Select defaultValue="mdy">
                   <SelectTrigger className="w-[180px] text-sm">
@@ -580,22 +644,34 @@ const Settings = () => {
 
           <Card className="shadow-card hover:shadow-card-hover transition-all border-border">
             <CardHeader className="pb-3 pt-5 px-5">
-              <CardTitle className="text-sm font-medium">Notification Preferences</CardTitle>
-              <CardDescription className="text-xs">Control how you receive notifications</CardDescription>
+              <CardTitle className="text-sm font-medium">
+                Notification Preferences
+              </CardTitle>
+              <CardDescription className="text-xs">
+                Control how you receive notifications
+              </CardDescription>
             </CardHeader>
             <CardContent className="px-5 pb-5 space-y-4">
               <div className="flex items-center justify-between py-3 border-b border-border">
                 <div className="space-y-0.5">
-                  <label className="text-sm font-medium">Email Notifications</label>
-                  <p className="text-xs text-muted-foreground">Receive updates via email</p>
+                  <label className="text-sm font-medium">
+                    Email Notifications
+                  </label>
+                  <p className="text-xs text-muted-foreground">
+                    Receive updates via email
+                  </p>
                 </div>
                 <Switch defaultChecked />
               </div>
 
               <div className="flex items-center justify-between py-3 border-b border-border">
                 <div className="space-y-0.5">
-                  <label className="text-sm font-medium">Desktop Notifications</label>
-                  <p className="text-xs text-muted-foreground">Show browser notifications</p>
+                  <label className="text-sm font-medium">
+                    Desktop Notifications
+                  </label>
+                  <p className="text-xs text-muted-foreground">
+                    Show browser notifications
+                  </p>
                 </div>
                 <Switch defaultChecked />
               </div>
@@ -603,7 +679,9 @@ const Settings = () => {
               <div className="flex items-center justify-between py-3">
                 <div className="space-y-0.5">
                   <label className="text-sm font-medium">Daily Digest</label>
-                  <p className="text-xs text-muted-foreground">Daily summary of your email activity</p>
+                  <p className="text-xs text-muted-foreground">
+                    Daily summary of your email activity
+                  </p>
                 </div>
                 <Switch />
               </div>
@@ -613,21 +691,31 @@ const Settings = () => {
           <Card className="shadow-card hover:shadow-card-hover transition-all border-border">
             <CardHeader className="pb-3 pt-5 px-5">
               <CardTitle className="text-sm font-medium">AI Behavior</CardTitle>
-              <CardDescription className="text-xs">Customize how AI processes your emails</CardDescription>
+              <CardDescription className="text-xs">
+                Customize how AI processes your emails
+              </CardDescription>
             </CardHeader>
             <CardContent className="px-5 pb-5 space-y-4">
               <div className="flex items-center justify-between py-3 border-b border-border">
                 <div className="space-y-0.5">
-                  <label className="text-sm font-medium">Auto-categorize New Emails</label>
-                  <p className="text-xs text-muted-foreground">Automatically sort incoming emails</p>
+                  <label className="text-sm font-medium">
+                    Auto-categorize New Emails
+                  </label>
+                  <p className="text-xs text-muted-foreground">
+                    Automatically sort incoming emails
+                  </p>
                 </div>
                 <Switch defaultChecked />
               </div>
 
               <div className="flex items-center justify-between py-3 border-b border-border">
                 <div className="space-y-0.5">
-                  <label className="text-sm font-medium">Auto-generate Drafts</label>
-                  <p className="text-xs text-muted-foreground">Create draft replies automatically</p>
+                  <label className="text-sm font-medium">
+                    Auto-generate Drafts
+                  </label>
+                  <p className="text-xs text-muted-foreground">
+                    Create draft replies automatically
+                  </p>
                 </div>
                 <Switch defaultChecked />
               </div>
@@ -635,7 +723,9 @@ const Settings = () => {
               <div className="flex items-center justify-between py-3">
                 <div className="space-y-0.5">
                   <label className="text-sm font-medium">Response Tone</label>
-                  <p className="text-xs text-muted-foreground">Set the default tone for AI drafts</p>
+                  <p className="text-xs text-muted-foreground">
+                    Set the default tone for AI drafts
+                  </p>
                 </div>
                 <Select defaultValue="professional">
                   <SelectTrigger className="w-[180px] text-sm">
@@ -659,8 +749,12 @@ const Settings = () => {
         <div className="space-y-4 md:space-y-6">
           <Card className="shadow-card hover:shadow-card-hover transition-all border-border">
             <CardHeader className="pb-3 pt-5 px-5">
-              <CardTitle className="text-sm font-medium">Current Plan</CardTitle>
-              <CardDescription className="text-xs">Manage your subscription</CardDescription>
+              <CardTitle className="text-sm font-medium">
+                Current Plan
+              </CardTitle>
+              <CardDescription className="text-xs">
+                Manage your subscription
+              </CardDescription>
             </CardHeader>
             <CardContent className="px-5 pb-5">
               <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg">
@@ -668,7 +762,9 @@ const Settings = () => {
                   <h3 className="text-sm font-semibold mb-1">Free Plan</h3>
                   <p className="text-xs text-muted-foreground">$0.00 / month</p>
                 </div>
-                <Badge className="bg-success text-success-foreground text-xs">Active</Badge>
+                <Badge className="bg-success text-success-foreground text-xs">
+                  Active
+                </Badge>
               </div>
               <p className="text-xs text-muted-foreground mt-4 text-center">
                 Billing features coming soon
