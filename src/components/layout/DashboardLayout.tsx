@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "./AppSidebar";
@@ -5,6 +6,7 @@ import { Bell, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
+import NotificationsPanel from "./NotificationsPanel";
 
 const getPageInfo = (pathname: string) => {
   const routes: Record<string, { title: string; subtitle: string }> = {
@@ -39,6 +41,7 @@ const getPageInfo = (pathname: string) => {
 export const DashboardLayout = () => {
   const location = useLocation();
   const pageInfo = getPageInfo(location.pathname);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
 
   return (
     <SidebarProvider>
@@ -61,7 +64,12 @@ export const DashboardLayout = () => {
                   className="w-48 xl:w-64 pl-9 h-9"
                 />
               </div>
-              <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full relative">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-9 w-9 rounded-full relative"
+                onClick={() => setNotificationsOpen(true)}
+              >
                 <Bell className="h-4 w-4" />
                 <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-destructive rounded-full border-2 border-card"></span>
               </Button>
@@ -77,6 +85,11 @@ export const DashboardLayout = () => {
           </main>
         </div>
       </div>
+      
+      <NotificationsPanel 
+        open={notificationsOpen} 
+        onOpenChange={setNotificationsOpen} 
+      />
     </SidebarProvider>
   );
 };

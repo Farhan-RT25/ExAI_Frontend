@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Loader2, Check, AlertCircle, ChevronRight, Sparkles } from "lucide-react";
-import { Card } from "@/components/ui/card";
+import { Loader2, Check, AlertCircle, Sparkles } from "lucide-react";
+import { motion } from "framer-motion";
 import { organizeAllEmails, startRealtimeEmailPolling } from "@/lib/api/onboarding";
 
 const steps = [
@@ -9,14 +9,6 @@ const steps = [
   'Creating smart categories',
   'Setting up AI draft system',
   'Organizing your last 15 days of emails',
-];
-
-const progressSteps = [
-  { number: 1, label: "Email Connection" },
-  { number: 2, label: "OAuth Authorization" },
-  { number: 3, label: "User Questions" },
-  { number: 4, label: "Categories" },
-  { number: 5, label: "Processing" },
 ];
 
 const Processing = () => {
@@ -82,14 +74,12 @@ const Processing = () => {
       console.log("✅ Email organization completed:", result);
       setOrganizationResult(result);
 
-      // Start realtime email polling after organization completes
       try {
         console.log("🚀 Starting realtime email polling for user:", userId);
         await startRealtimeEmailPolling(userId);
         console.log("✅ Realtime email polling started successfully");
       } catch (pollingError: any) {
         console.warn("⚠️ Failed to start realtime email polling:", pollingError);
-        // Don't block onboarding completion if polling fails
       }
 
       if (progress >= 100) {
@@ -115,121 +105,148 @@ const Processing = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <Card className="w-full max-w-3xl bg-card shadow-card-hover rounded-xl overflow-hidden border-border">
-        {/* Progress Breadcrumb */}
-        <div className="bg-secondary/50 px-8 py-6 border-b border-border">
-          <div className="flex items-center justify-between max-w-2xl mx-auto">
-            {progressSteps.map((step, index) => (
-              <div key={step.number} className="flex items-center">
-                <div className="flex flex-col items-center">
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold transition-all ${
-                    complete
-                      ? 'bg-success text-success-foreground shadow-glow' 
-                      : step.number === 5
-                      ? 'bg-primary text-primary-foreground shadow-glow animate-pulse'
-                      : step.number < 5
-                      ? 'bg-primary text-primary-foreground shadow-glow'
-                      : 'bg-muted text-muted-foreground'
-                  }`}>
-                    {complete ? <Check className="h-5 w-5" /> : step.number < 5 ? <Check className="h-5 w-5" /> : step.number}
-                  </div>
-                  <span className={`text-xs mt-2 font-medium ${
-                    step.number <= 5 ? 'text-primary' : 'text-muted-foreground'
-                  }`}>
-                    {step.label}
-                  </span>
-                </div>
-                {index < progressSteps.length - 1 && (
-                  <ChevronRight className="h-5 w-5 text-muted-foreground mx-2 mb-6" />
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
+    <div className="min-h-screen bg-background flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Ambient background effects */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl animate-pulse" />
+        <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-primary/5 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-gradient-radial from-primary/5 to-transparent rounded-full blur-2xl" />
+      </div>
 
-        <div className="p-12">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6 }}
+        className="w-full max-w-lg relative z-10"
+      >
+        <div className="bg-card/50 backdrop-blur-xl border border-border/50 rounded-2xl p-8 md:p-12 shadow-2xl">
           {!complete ? (
             <>
-              <div className="mb-8 flex justify-center">
+              {/* Loading animation */}
+              <div className="mb-10 flex justify-center">
                 <div className="relative">
-                  <Loader2 className="h-16 w-16 text-primary animate-spin" />
-                  <div className="absolute inset-0 bg-primary opacity-20 blur-xl rounded-full"></div>
+                  <div className="w-24 h-24 rounded-full border-4 border-primary/20 flex items-center justify-center">
+                    <Loader2 className="h-12 w-12 text-primary animate-spin" />
+                  </div>
+                  <div className="absolute inset-0 bg-primary/20 blur-2xl rounded-full animate-pulse" />
                 </div>
               </div>
 
-              <h1 className="text-3xl font-bold mb-4 text-center text-foreground">Nyx is Getting Things Ready</h1>
+              <h1 className="text-2xl md:text-3xl font-bold mb-2 text-center text-foreground">
+                Setting Up Your Workspace
+              </h1>
+              <p className="text-muted-foreground text-center mb-8">
+                Nyx is preparing everything for you
+              </p>
 
-              <div className="space-y-3 mb-8 max-w-md mx-auto">
+              {/* Progress bar */}
+              <div className="mb-8">
+                <div className="h-2 bg-muted rounded-full overflow-hidden">
+                  <motion.div
+                    className="h-full bg-gradient-to-r from-primary to-primary/70 rounded-full"
+                    initial={{ width: 0 }}
+                    animate={{ width: `${progress}%` }}
+                    transition={{ duration: 0.1 }}
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground mt-2 text-center">{Math.round(progress)}% complete</p>
+              </div>
+
+              {/* Steps */}
+              <div className="space-y-3 mb-6">
                 {steps.map((step, index) => (
-                  <div
+                  <motion.div
                     key={index}
-                    className={`flex items-center gap-3 transition-all ${
-                      index <= currentStep ? 'opacity-100' : 'opacity-30'
-                    }`}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: index <= currentStep ? 1 : 0.3, x: 0 }}
+                    transition={{ delay: index * 0.1 }}
+                    className="flex items-center gap-3"
                   >
-                    <div className={`w-2 h-2 rounded-full ${
-                      index < currentStep ? 'bg-success' : 
-                      index === currentStep ? 'bg-primary animate-pulse' : 'bg-muted'
-                    }`} />
-                    <p className="text-left text-sm text-muted-foreground">{step}</p>
-                    {index < currentStep && (
-                      <Check className="h-4 w-4 text-success ml-auto" />
-                    )}
-                  </div>
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 transition-all ${
+                      index < currentStep 
+                        ? 'bg-primary text-primary-foreground' 
+                        : index === currentStep 
+                        ? 'bg-primary/20 border-2 border-primary' 
+                        : 'bg-muted border border-border'
+                    }`}>
+                      {index < currentStep ? (
+                        <Check className="h-3.5 w-3.5" />
+                      ) : index === currentStep ? (
+                        <div className="w-2 h-2 bg-primary rounded-full animate-pulse" />
+                      ) : (
+                        <span className="text-xs text-muted-foreground">{index + 1}</span>
+                      )}
+                    </div>
+                    <p className={`text-sm ${index <= currentStep ? 'text-foreground' : 'text-muted-foreground'}`}>
+                      {step}
+                    </p>
+                  </motion.div>
                 ))}
               </div>
               
               {organizationResult && (
-                <div className="mt-4 p-3 bg-primary/10 border border-primary/30 rounded-lg max-w-md mx-auto">
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="p-3 bg-primary/10 border border-primary/30 rounded-lg"
+                >
                   <p className="text-xs text-primary font-medium flex items-center gap-2">
                     <Check className="h-4 w-4" />
                     Organized {organizationResult.accounts?.reduce((sum: number, acc: any) => 
                       sum + acc.organized_count, 0) || 0} emails across{' '}
                     {organizationResult.total_accounts_processed || 0} account(s)
                   </p>
-                </div>
+                </motion.div>
               )}
 
               {error && (
-                <div className="mt-4 p-3 bg-warning/10 border border-warning/30 rounded-lg flex items-start gap-2 max-w-md mx-auto">
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="p-3 bg-warning/10 border border-warning/30 rounded-lg flex items-start gap-2"
+                >
                   <AlertCircle className="h-4 w-4 text-warning mt-0.5 flex-shrink-0" />
                   <p className="text-xs text-warning-foreground text-left">
                     {error} - Don't worry, you can organize emails later from your dashboard.
                   </p>
-                </div>
+                </motion.div>
               )}
-
-              <p className="text-sm text-muted-foreground mt-6 text-center">
-                This usually takes 20-30 seconds...
-              </p>
             </>
           ) : (
-            <>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.5 }}
+            >
+              {/* Success animation */}
               <div className="mb-8 flex justify-center relative">
-                <div className="p-4 bg-success/20 rounded-full">
-                  <Check className="h-16 w-16 text-success" />
+                <div className="w-24 h-24 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center shadow-lg shadow-primary/30">
+                  <Check className="h-12 w-12 text-primary-foreground" />
                 </div>
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                   {[...Array(8)].map((_, i) => (
-                    <div
+                    <motion.div
                       key={i}
-                      className="absolute w-2 h-2 bg-primary rounded-full animate-ping"
+                      initial={{ opacity: 0, scale: 0 }}
+                      animate={{ opacity: [0, 1, 0], scale: [0.5, 1, 1.5] }}
+                      transition={{ delay: i * 0.1, duration: 1, repeat: Infinity, repeatDelay: 2 }}
+                      className="absolute w-3 h-3 bg-primary rounded-full"
                       style={{
-                        animationDelay: `${i * 100}ms`,
-                        transform: `rotate(${i * 45}deg) translateY(-100px)`,
+                        transform: `rotate(${i * 45}deg) translateY(-60px)`,
                       }}
                     />
                   ))}
                 </div>
               </div>
 
-              <h1 className="text-3xl font-bold mb-4 text-center text-foreground">All Set!</h1>
+              <h1 className="text-2xl md:text-3xl font-bold mb-3 text-center text-foreground">
+                You're All Set!
+              </h1>
               
               {organizationResult && (
-                <div className="mb-4 p-4 bg-success/10 border border-success/30 rounded-lg max-w-lg mx-auto">
+                <div className="mb-6 p-4 bg-primary/10 border border-primary/30 rounded-xl">
                   <p className="text-sm text-foreground font-medium mb-2 flex items-center gap-2">
-                    <Sparkles className="h-4 w-4 text-success" />
+                    <Sparkles className="h-4 w-4 text-primary" />
                     Successfully organized your inbox!
                   </p>
                   <div className="text-xs text-muted-foreground space-y-1">
@@ -241,13 +258,14 @@ const Processing = () => {
                 </div>
               )}
               
-              <p className="text-muted-foreground text-center">
+              <p className="text-muted-foreground text-center flex items-center justify-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" />
                 Redirecting to your dashboard...
               </p>
-            </>
+            </motion.div>
           )}
         </div>
-      </Card>
+      </motion.div>
     </div>
   );
 };

@@ -2,6 +2,12 @@ import { Bell, Mail, Calendar, CheckCircle, AlertCircle, X } from "lucide-react"
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface Notification {
   id: number;
@@ -56,7 +62,8 @@ const notifications: Notification[] = [
 ];
 
 interface NotificationsPanelProps {
-  onClose: () => void;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }
 
 const getIcon = (type: Notification["type"]) => {
@@ -74,70 +81,66 @@ const getIcon = (type: Notification["type"]) => {
   }
 };
 
-const NotificationsPanel = ({ onClose }: NotificationsPanelProps) => {
+const NotificationsPanel = ({ open, onOpenChange }: NotificationsPanelProps) => {
   const unreadCount = notifications.filter(n => !n.read).length;
 
   return (
-    <div className="w-full sm:w-80 bg-card border border-border rounded-lg shadow-lg overflow-hidden">
-      {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-border">
-        <div className="flex items-center gap-2">
-          <Bell className="h-5 w-5 text-primary" />
-          <span className="font-semibold">Notifications</span>
-          {unreadCount > 0 && (
-            <Badge variant="default" className="bg-primary text-xs px-2">
-              {unreadCount}
-            </Badge>
-          )}
-        </div>
-        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onClose}>
-          <X className="h-4 w-4" />
-        </Button>
-      </div>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md p-0 gap-0 bg-card border-border">
+        <DialogHeader className="p-4 pb-3 border-b border-border">
+          <DialogTitle className="flex items-center gap-2 text-base">
+            <Bell className="h-5 w-5 text-primary" />
+            Notifications
+            {unreadCount > 0 && (
+              <Badge variant="default" className="bg-primary text-xs px-2 ml-1">
+                {unreadCount}
+              </Badge>
+            )}
+          </DialogTitle>
+        </DialogHeader>
 
-      {/* Notifications List */}
-      <ScrollArea className="h-80">
-        <div className="divide-y divide-border">
-          {notifications.map((notification) => (
-            <div
-              key={notification.id}
-              className={`p-4 hover:bg-secondary/50 transition-colors cursor-pointer ${
-                !notification.read ? 'bg-primary/5' : ''
-              }`}
-            >
-              <div className="flex gap-3">
-                <div className="p-2 rounded-lg bg-secondary shrink-0">
-                  {getIcon(notification.type)}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-start justify-between gap-2">
-                    <p className={`text-sm font-medium truncate ${!notification.read ? 'text-foreground' : 'text-muted-foreground'}`}>
-                      {notification.title}
-                    </p>
-                    {!notification.read && (
-                      <div className="w-2 h-2 rounded-full bg-primary shrink-0 mt-1.5" />
-                    )}
+        <ScrollArea className="max-h-[400px]">
+          <div className="divide-y divide-border">
+            {notifications.map((notification) => (
+              <div
+                key={notification.id}
+                className={`p-4 hover:bg-muted/50 transition-colors cursor-pointer ${
+                  !notification.read ? 'bg-primary/5' : ''
+                }`}
+              >
+                <div className="flex gap-3">
+                  <div className="p-2 rounded-lg bg-muted shrink-0">
+                    {getIcon(notification.type)}
                   </div>
-                  <p className="text-xs text-muted-foreground truncate mt-0.5">
-                    {notification.description}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {notification.time}
-                  </p>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-2">
+                      <p className={`text-sm font-medium truncate ${!notification.read ? 'text-foreground' : 'text-muted-foreground'}`}>
+                        {notification.title}
+                      </p>
+                      {!notification.read && (
+                        <div className="w-2 h-2 rounded-full bg-primary shrink-0 mt-1.5" />
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground truncate mt-0.5">
+                      {notification.description}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {notification.time}
+                    </p>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
-      </ScrollArea>
+            ))}
+          </div>
+        </ScrollArea>
 
-      {/* Footer */}
-      <div className="p-3 border-t border-border">
-        <Button variant="ghost" className="w-full text-sm text-primary hover:text-primary">
-          View all notifications
-        </Button>
-      </div>
-    </div>
+        <div className="p-3 border-t border-border">
+          <Button variant="ghost" className="w-full text-sm text-primary hover:text-primary">
+            Mark all as read
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 };
 
