@@ -2,9 +2,16 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Video, Calendar, Clock, Users, FileText, Play, Search, Filter, ChevronRight, Mic, Brain, MessageSquare, Plus, Eye, EyeOff, ExternalLink, Upload, CheckCircle2, TrendingUp, BarChart3 } from "lucide-react";
+import { Video, Calendar, Clock, Users, FileText, Play, Search, Filter, ChevronRight, Mic, Brain, MessageSquare, Plus, Eye, EyeOff, ExternalLink, Upload, CheckCircle2, TrendingUp, BarChart3, History } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 // Sample meetings data
 const meetings = [
@@ -106,15 +113,33 @@ const meetings = [
   },
 ];
 
+const languages = [
+  { value: "en", label: "English" },
+  { value: "es", label: "Spanish" },
+  { value: "fr", label: "French" },
+  { value: "de", label: "German" },
+  { value: "zh", label: "Chinese" },
+  { value: "ja", label: "Japanese" },
+  { value: "ko", label: "Korean" },
+  { value: "pt", label: "Portuguese" },
+  { value: "ar", label: "Arabic" },
+  { value: "hi", label: "Hindi" },
+];
+
 const Meetings = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedMeeting, setSelectedMeeting] = useState<typeof meetings[0] | null>(null);
   const [showStats, setShowStats] = useState(true);
   const [activeTab, setActiveTab] = useState("overview");
+  const [meetingsTab, setMeetingsTab] = useState("upcoming");
+  const [selectedLanguage, setSelectedLanguage] = useState("en");
 
   const filteredMeetings = meetings.filter(meeting =>
     meeting.title.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const upcomingMeetings = filteredMeetings.filter(m => m.status === "upcoming");
+  const pastMeetings = filteredMeetings.filter(m => m.status === "completed");
 
   // If a meeting is selected, show detail view
   if (selectedMeeting) {
@@ -491,111 +516,208 @@ const Meetings = () => {
       )}
 
       {/* New Meeting Section */}
-      <Card className="border-2 border-dashed">
+      <Card className="border border-border/50 bg-gradient-to-br from-card to-card/80">
         <CardContent className="p-6">
-          <h2 className="text-lg font-semibold mb-4">New meeting</h2>
-          <div className="flex flex-wrap gap-3 mb-4">
-            <Button variant="secondary" className="gap-2">
+          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+            <Plus className="h-5 w-5 text-primary" />
+            New meeting
+          </h2>
+          <div className="flex flex-wrap gap-3 mb-6">
+            <Button variant="secondary" className="gap-2 hover:bg-primary/10 hover:border-primary/50 transition-all">
               <Video className="h-4 w-4" />
               Online meeting
             </Button>
-            <Button variant="secondary" className="gap-2">
+            <Button variant="secondary" className="gap-2 hover:bg-primary/10 hover:border-primary/50 transition-all">
               <Users className="h-4 w-4" />
               In-person meeting
             </Button>
-            <Button variant="secondary" className="gap-2">
+            <Button variant="secondary" className="gap-2 hover:bg-primary/10 hover:border-primary/50 transition-all">
               <Upload className="h-4 w-4" />
               Upload meeting
             </Button>
           </div>
-          <div className="space-y-3">
-            <Input placeholder="Paste your meeting URL here" className="bg-background" />
-            <div className="flex gap-2">
-              <Input placeholder="Name your meeting (optional)" className="bg-background" />
-              <Input placeholder="Meeting language" className="bg-background" />
-              <Input placeholder="Bot name" className="bg-background" />
+          <div className="space-y-4">
+            <Input placeholder="Paste your meeting URL here" className="bg-background/50 border-border/50 h-11" />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <Input placeholder="Name your meeting (optional)" className="bg-background/50 border-border/50 h-11" />
+              <Select value={selectedLanguage} onValueChange={setSelectedLanguage}>
+                <SelectTrigger className="bg-background/50 border-border/50 h-11">
+                  <SelectValue placeholder="Select language" />
+                </SelectTrigger>
+                <SelectContent>
+                  {languages.map((lang) => (
+                    <SelectItem key={lang.value} value={lang.value}>
+                      {lang.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Input 
+                value="Nyx AI" 
+                readOnly 
+                className="bg-muted/50 border-border/50 h-11 text-muted-foreground cursor-not-allowed" 
+              />
             </div>
           </div>
-          <Button className="mt-4 bg-primary hover:bg-primary/90">
+          <Button className="mt-6 bg-primary hover:bg-primary/90 h-11 px-6">
             <Play className="h-4 w-4 mr-2" />
             Start capturing
           </Button>
         </CardContent>
       </Card>
 
-      {/* Recent Meetings */}
-      <div>
+      {/* Meetings Tabs - Upcoming & Past */}
+      <Tabs value={meetingsTab} onValueChange={setMeetingsTab} className="w-full">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-semibold">Recent meetings</h2>
-          <Button variant="link" className="text-primary">
-            Go to Meetings <ChevronRight className="h-4 w-4 ml-1" />
-          </Button>
+          <TabsList className="bg-muted/50">
+            <TabsTrigger value="upcoming" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              <Calendar className="h-4 w-4" />
+              Upcoming ({upcomingMeetings.length})
+            </TabsTrigger>
+            <TabsTrigger value="past" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              <History className="h-4 w-4" />
+              Past ({pastMeetings.length})
+            </TabsTrigger>
+          </TabsList>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {filteredMeetings.map((meeting) => (
-            <Card 
-              key={meeting.id}
-              className="border hover:border-primary/50 transition-all cursor-pointer group"
-              onClick={() => setSelectedMeeting(meeting)}
-            >
-              <CardContent className="p-6">
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex-1">
-                    <h3 className="font-semibold mb-1 group-hover:text-primary transition-colors">
-                      {meeting.title}
-                    </h3>
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        <Calendar className="h-3 w-3" />
-                        {meeting.date}
-                      </span>
-                      <span>•</span>
-                      <span className="flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        {meeting.duration}
-                      </span>
-                      {meeting.hasTranscript && (
-                        <>
+        <TabsContent value="upcoming" className="mt-0">
+          {upcomingMeetings.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {upcomingMeetings.map((meeting) => (
+                <Card 
+                  key={meeting.id}
+                  className="border border-border/50 hover:border-primary/50 transition-all cursor-pointer group bg-gradient-to-br from-card to-card/80"
+                  onClick={() => setSelectedMeeting(meeting)}
+                >
+                  <CardContent className="p-6">
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex-1">
+                        <h3 className="font-semibold mb-1 group-hover:text-primary transition-colors">
+                          {meeting.title}
+                        </h3>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <span className="flex items-center gap-1">
+                            <Calendar className="h-3 w-3" />
+                            {meeting.date}
+                          </span>
                           <span>•</span>
-                          <FileText className="h-3 w-3 text-success" />
-                        </>
+                          <span className="flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            {meeting.duration}
+                          </span>
+                        </div>
+                      </div>
+                      <Badge className="bg-primary/20 text-primary border-primary/30">
+                        {meeting.tag}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center gap-2 mt-4">
+                      <div className="flex -space-x-2">
+                        {meeting.participants.slice(0, 3).map((participant, index) => (
+                          <div
+                            key={index}
+                            className="w-7 h-7 rounded-full bg-primary/20 border-2 border-card flex items-center justify-center text-xs font-semibold"
+                          >
+                            {participant.avatar}
+                          </div>
+                        ))}
+                      </div>
+                      {meeting.participants.length > 3 && (
+                        <span className="text-xs text-muted-foreground">
+                          +{meeting.participants.length - 3}
+                        </span>
                       )}
                     </div>
-                  </div>
-                  <Badge className="bg-primary/80 text-white">
-                    {meeting.tag}
-                  </Badge>
-                </div>
-
-                {meeting.description && (
-                  <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
-                    {meeting.description}
-                  </p>
-                )}
-
-                <div className="flex items-center gap-2">
-                  <div className="flex -space-x-2">
-                    {meeting.participants.slice(0, 3).map((participant, index) => (
-                      <div
-                        key={index}
-                        className="w-7 h-7 rounded-full bg-primary/20 border-2 border-card flex items-center justify-center text-xs font-semibold"
-                      >
-                        {participant.avatar}
-                      </div>
-                    ))}
-                  </div>
-                  {meeting.participants.length > 3 && (
-                    <span className="text-xs text-muted-foreground">
-                      +{meeting.participants.length - 3}
-                    </span>
-                  )}
-                </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <Card className="border border-border/50 bg-muted/20">
+              <CardContent className="p-12 text-center">
+                <Calendar className="h-12 w-12 text-muted-foreground/50 mx-auto mb-4" />
+                <p className="text-muted-foreground">No upcoming meetings scheduled</p>
               </CardContent>
             </Card>
-          ))}
-        </div>
-      </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="past" className="mt-0">
+          {pastMeetings.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {pastMeetings.map((meeting) => (
+                <Card 
+                  key={meeting.id}
+                  className="border border-border/50 hover:border-primary/50 transition-all cursor-pointer group bg-gradient-to-br from-card to-card/80"
+                  onClick={() => setSelectedMeeting(meeting)}
+                >
+                  <CardContent className="p-6">
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex-1">
+                        <h3 className="font-semibold mb-1 group-hover:text-primary transition-colors">
+                          {meeting.title}
+                        </h3>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <span className="flex items-center gap-1">
+                            <Calendar className="h-3 w-3" />
+                            {meeting.date}
+                          </span>
+                          <span>•</span>
+                          <span className="flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            {meeting.duration}
+                          </span>
+                          {meeting.hasTranscript && (
+                            <>
+                              <span>•</span>
+                              <FileText className="h-3 w-3 text-success" />
+                            </>
+                          )}
+                        </div>
+                      </div>
+                      <Badge className="bg-success/20 text-success border-success/30">
+                        {meeting.tag}
+                      </Badge>
+                    </div>
+
+                    {meeting.description && (
+                      <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
+                        {meeting.description}
+                      </p>
+                    )}
+
+                    <div className="flex items-center gap-2">
+                      <div className="flex -space-x-2">
+                        {meeting.participants.slice(0, 3).map((participant, index) => (
+                          <div
+                            key={index}
+                            className="w-7 h-7 rounded-full bg-primary/20 border-2 border-card flex items-center justify-center text-xs font-semibold"
+                          >
+                            {participant.avatar}
+                          </div>
+                        ))}
+                      </div>
+                      {meeting.participants.length > 3 && (
+                        <span className="text-xs text-muted-foreground">
+                          +{meeting.participants.length - 3}
+                        </span>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <Card className="border border-border/50 bg-muted/20">
+              <CardContent className="p-12 text-center">
+                <History className="h-12 w-12 text-muted-foreground/50 mx-auto mb-4" />
+                <p className="text-muted-foreground">No past meetings yet</p>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
