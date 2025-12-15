@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -12,7 +11,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { HelpCircle, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { getConnections, getAuthorizationUrl, disconnectEmailAccount, type ConnectionProvider } from "@/lib/api/connections";
 
@@ -209,35 +208,34 @@ const Connections = () => {
           {filteredConnections.map((connection) => {
             const connectedCount = connection.accounts.filter(acc => acc.connected).length;
             const isConnected = connectedCount > 0;
-            const disconnectedAccounts = connection.accounts.filter(acc => !acc.connected);
 
             return (
-              <Card key={connection.id} className="shadow-card hover:shadow-card-hover transition-all border-border">
-                <CardHeader className="pb-3 pt-5 px-5">
+              <Card key={connection.id} className="shadow-card hover:shadow-card-hover transition-all border-border h-full flex flex-col">
+                <CardHeader className="pb-3 pt-5 px-5 flex-1">
                   <div className="flex items-start gap-3">
-                    <div className="mt-1">{getProviderLogo(connection.id)}</div>
+                    <div className="mt-1 shrink-0">{getProviderLogo(connection.id)}</div>
                     <div className="flex-1 min-w-0">
                       <CardTitle className="text-sm font-semibold mb-1">
                         {connection.provider}
                       </CardTitle>
-                      <p className="text-xs text-muted-foreground leading-relaxed">
+                      <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">
                         {connection.description}
                       </p>
                     </div>
                   </div>
                 </CardHeader>
-                <CardContent className="px-5 pb-5">
+                <CardContent className="px-5 pb-5 mt-auto">
                   {connection.accounts.length > 0 && (
                     <div className="mb-3 space-y-2">
                       {connection.accounts.map((account) => (
                         <div key={account.email_account_id} className="text-xs text-muted-foreground flex items-center gap-1.5">
-                          <div className={`w-1.5 h-1.5 rounded-full ${account.connected ? 'bg-green-500' : 'bg-muted'}`} />
+                          <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${account.connected ? 'bg-green-500' : 'bg-muted'}`} />
                           <span className="flex-1 truncate">{account.email}</span>
                           {!account.connected && (
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="text-xs h-6 px-2 text-primary hover:bg-primary/10"
+                              className="text-xs h-6 px-2 text-primary hover:bg-primary/10 shrink-0"
                               onClick={() => handleConnect(account.email_account_id)}
                               disabled={connectingAccount === account.email_account_id}
                             >
@@ -255,7 +253,7 @@ const Connections = () => {
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="text-xs h-6 px-2 text-destructive hover:bg-destructive/10"
+                              className="text-xs h-6 px-2 text-destructive hover:bg-destructive/10 shrink-0"
                               onClick={() => {
                                 setPendingDisconnect({
                                   emailAccountId: account.email_account_id,

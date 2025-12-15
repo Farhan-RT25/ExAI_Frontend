@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Mail, Clock, TrendingUp, MessageSquare, HelpCircle, ChevronDown, Check, Zap, CheckCircle2, Sparkles, BarChart3, Calendar, Video, ChevronRight, Users } from "lucide-react";
+import { Mail, TrendingUp, HelpCircle, ChevronDown, Check, Zap, CheckCircle2, Calendar, Video, ChevronRight, Inbox, FolderOpen, Send } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,9 +12,9 @@ import {
 import StatCard from "@/components/StatCard";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { useNavigate } from "react-router-dom";
+import ReactECharts from "echarts-for-react";
 
 import { getProfile, getAccessToken, type User } from "@/lib/api/auth";
-import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend, CartesianGrid } from 'recharts';
 import { 
   getDashboardData, 
   getDashboardAccounts,
@@ -22,19 +22,18 @@ import {
   type KPIMetric,
   type VolumeDataPoint,
   type CategoryDataPoint,
-  type ProcessingTimeDataPoint,
-  type AIInsight
 } from "@/lib/api/dashboard";
 
 // Icon mapping for KPI metrics
 const iconMap: Record<string, any> = {
   Mail: <Mail className="h-5 w-5" />,
-  Clock: <Clock className="h-5 w-5" />,
+  Inbox: <Inbox className="h-5 w-5" />,
   CheckCircle2: <CheckCircle2 className="h-5 w-5" />,
   TrendingUp: <TrendingUp className="h-5 w-5" />,
-  MessageSquare: <MessageSquare className="h-5 w-5" />,
+  FolderOpen: <FolderOpen className="h-5 w-5" />,
   HelpCircle: <HelpCircle className="h-5 w-5" />,
-  Zap: <Zap className="h-5 w-5" />
+  Zap: <Zap className="h-5 w-5" />,
+  Send: <Send className="h-5 w-5" />
 };
 
 // Sample upcoming meetings data
@@ -80,9 +79,6 @@ const DashboardHome = () => {
   const [kpi, setKpi] = useState<KPIMetric[]>([]);
   const [volumeData, setVolumeData] = useState<VolumeDataPoint[]>([]);
   const [categoryData, setCategoryData] = useState<CategoryDataPoint[]>([]);
-  const [spendingData, setSpendingData] = useState<ProcessingTimeDataPoint[]>([]);
-  const [aiInsights, setAiInsights] = useState<AIInsight[]>([]);
-  const [mainInsight, setMainInsight] = useState<string>("");
 
   const currentAccount = emailAccounts.find(acc => acc.id === selectedAccount);
 
@@ -100,9 +96,6 @@ const DashboardHome = () => {
       setKpi(data.kpi);
       setVolumeData(data.volumeData);
       setCategoryData(data.categoryData);
-      setSpendingData(data.spendingData);
-      setAiInsights(data.aiInsights);
-      setMainInsight(data.mainInsight || "");
       
     } catch (err) {
       console.error("Failed to fetch dashboard data:", err);
@@ -174,6 +167,135 @@ const DashboardHome = () => {
     return "there";
   };
 
+  // ECharts options for Email Volume
+  const getVolumeChartOption = () => ({
+    tooltip: {
+      trigger: 'axis',
+      backgroundColor: 'hsl(var(--card))',
+      borderColor: 'hsl(var(--border))',
+      borderWidth: 1,
+      textStyle: {
+        color: 'hsl(var(--foreground))',
+        fontSize: 11
+      }
+    },
+    legend: {
+      data: ['Received', 'Responded'],
+      bottom: 0,
+      textStyle: {
+        color: 'hsl(var(--muted-foreground))',
+        fontSize: 11
+      },
+      icon: 'circle',
+      itemWidth: 8,
+      itemHeight: 8
+    },
+    grid: {
+      left: '3%',
+      right: '4%',
+      bottom: '15%',
+      top: '10%',
+      containLabel: true
+    },
+    xAxis: {
+      type: 'category',
+      data: volumeData.map(d => d.month),
+      axisLine: { lineStyle: { color: 'hsl(var(--border))' } },
+      axisLabel: { color: 'hsl(var(--muted-foreground))', fontSize: 11 },
+      axisTick: { show: false }
+    },
+    yAxis: {
+      type: 'value',
+      axisLine: { show: false },
+      axisLabel: { color: 'hsl(var(--muted-foreground))', fontSize: 11 },
+      splitLine: { lineStyle: { color: 'hsl(var(--border))', opacity: 0.3 } }
+    },
+    series: [
+      {
+        name: 'Received',
+        type: 'line',
+        data: volumeData.map(d => d.emails),
+        smooth: true,
+        symbol: 'circle',
+        symbolSize: 6,
+        lineStyle: { width: 2, color: '#a78bfa' },
+        itemStyle: { color: '#a78bfa' },
+        areaStyle: {
+          color: {
+            type: 'linear',
+            x: 0, y: 0, x2: 0, y2: 1,
+            colorStops: [
+              { offset: 0, color: 'rgba(167, 139, 250, 0.3)' },
+              { offset: 1, color: 'rgba(167, 139, 250, 0)' }
+            ]
+          }
+        }
+      },
+      {
+        name: 'Responded',
+        type: 'line',
+        data: volumeData.map(d => d.responded),
+        smooth: true,
+        symbol: 'circle',
+        symbolSize: 6,
+        lineStyle: { width: 2, color: '#009773' },
+        itemStyle: { color: '#009773' },
+        areaStyle: {
+          color: {
+            type: 'linear',
+            x: 0, y: 0, x2: 0, y2: 1,
+            colorStops: [
+              { offset: 0, color: 'rgba(0, 151, 115, 0.3)' },
+              { offset: 1, color: 'rgba(0, 151, 115, 0)' }
+            ]
+          }
+        }
+      }
+    ]
+  });
+
+  // ECharts options for Category Distribution
+  const getCategoryChartOption = () => ({
+    tooltip: {
+      trigger: 'item',
+      backgroundColor: 'hsl(var(--card))',
+      borderColor: 'hsl(var(--border))',
+      borderWidth: 1,
+      textStyle: {
+        color: 'hsl(var(--foreground))',
+        fontSize: 11
+      },
+      formatter: '{b}: {c} ({d}%)'
+    },
+    series: [
+      {
+        type: 'pie',
+        radius: ['50%', '75%'],
+        center: ['50%', '50%'],
+        avoidLabelOverlap: false,
+        itemStyle: {
+          borderRadius: 4,
+          borderColor: 'hsl(var(--card))',
+          borderWidth: 2
+        },
+        label: { show: false },
+        emphasis: {
+          label: { show: false },
+          itemStyle: {
+            shadowBlur: 10,
+            shadowOffsetX: 0,
+            shadowColor: 'rgba(0, 0, 0, 0.3)'
+          }
+        },
+        data: categoryData.map(c => ({
+          value: c.value,
+          name: c.name,
+          itemStyle: { color: c.color }
+        }))
+      }
+    ]
+  });
+
   if (error && error.includes("API base URL is not configured")) {
     return (
       <div className="space-y-6">
@@ -242,7 +364,7 @@ const DashboardHome = () => {
         </DropdownMenu>
       </div>
 
-      {/* KPI Cards - Using StatCard Component */}
+      {/* KPI Cards - Email focused stats */}
       {kpi.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {kpi.map((kpiItem, index) => {
@@ -276,168 +398,46 @@ const DashboardHome = () => {
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         {/* Left Section - Charts (2/3 width on XL) */}
         <div className="xl:col-span-2 space-y-6">
-          {/* Main Charts Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* AI Insights Card */}
-            <Card className="border border-border/50 hover:border-primary/50 transition-all shadow-card relative overflow-hidden bg-gradient-to-br from-card to-card/80">
-              <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-[#009773]/5 pointer-events-none" />
-              
-              <CardHeader className="pb-4 pt-6 px-6 relative z-10">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg font-semibold flex items-center gap-2">
-                    <Sparkles className="h-5 w-5 text-primary" />
-                    AI Insights
-                  </CardTitle>
-                  <Badge variant="secondary" className="text-xs bg-primary/10 text-primary border-primary/20">Real-time</Badge>
+          {/* Email Volume Chart */}
+          <Card className="border border-border/50 hover:border-primary/50 transition-all shadow-card bg-gradient-to-br from-card to-card/80">
+            <CardHeader className="pb-4 pt-6 px-6">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-lg font-semibold">Email Volume</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent className="px-6 pb-6">
+              {volumeData.length > 0 ? (
+                <ReactECharts 
+                  option={getVolumeChartOption()} 
+                  style={{ height: '280px' }}
+                  opts={{ renderer: 'svg' }}
+                />
+              ) : (
+                <div className="h-[280px] flex items-center justify-center text-muted-foreground">
+                  <p>No email data available yet</p>
                 </div>
-              </CardHeader>
-              <CardContent className="px-6 pb-6 relative z-10">
-                {mainInsight && (
-                  <div className="mb-6 p-5 rounded-xl bg-gradient-to-br from-primary/10 to-[#009773]/10 border border-primary/20 relative">
-                    <div className="absolute top-4 right-4">
-                      <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-                    </div>
-                    <p className="text-xs text-muted-foreground mb-1">Your Email Volume</p>
-                    <h3 className="text-xl font-bold mb-1">  
-                      {mainInsight}
-                    </h3>
-                    <p className="text-xs text-muted-foreground">Since last Month</p>
-                  </div>
-                )}
+              )}
+            </CardContent>
+          </Card>
 
-                <div className="space-y-2">
-                  {aiInsights.map((insight, index) => (
-                    <div 
-                      key={index}
-                      className="flex items-start gap-3 p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors"
-                    >
-                      <div className="p-1.5 rounded-lg bg-primary/10">
-                        {insight.trend === "up" ? (
-                          <TrendingUp className="h-3.5 w-3.5 text-success" />
-                        ) : (
-                          <BarChart3 className="h-3.5 w-3.5 text-primary" />
-                        )}
-                      </div>
-                      <p className="text-sm flex-1">{insight.text}</p>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Email Volume Chart */}
-            <Card className="border border-border/50 hover:border-primary/50 transition-all shadow-card bg-gradient-to-br from-card to-card/80">
-              <CardHeader className="pb-4 pt-6 px-6">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg font-semibold">Email Volume</CardTitle>
-                  <div className="flex items-center gap-3 text-xs">
-                    <div className="flex items-center gap-1.5">
-                      <div className="w-2.5 h-2.5 rounded-full bg-primary" />
-                      <span className="text-muted-foreground">Received</span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <div className="w-2.5 h-2.5 rounded-full bg-[#009773]" />
-                      <span className="text-muted-foreground">Responded</span>
-                    </div>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="px-6 pb-6">
-                {volumeData.length > 0 ? (
-                  <ResponsiveContainer width="100%" height={220}>
-                    <LineChart data={volumeData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
-                      <XAxis 
-                        dataKey="month" 
-                        stroke="hsl(var(--muted-foreground))"
-                        fontSize={11}
-                        tickLine={false}
-                      />
-                      <YAxis 
-                        stroke="hsl(var(--muted-foreground))"
-                        fontSize={11}
-                        tickLine={false}
-                      />
-                      <Tooltip 
-                        contentStyle={{
-                          backgroundColor: 'hsl(var(--card))',
-                          border: '1px solid hsl(var(--border))',
-                          borderRadius: '8px',
-                          fontSize: '11px'
-                        }}
-                      />
-                      <Line 
-                        type="monotone" 
-                        dataKey="emails" 
-                        stroke="#a78bfa" 
-                        strokeWidth={2}
-                        dot={{ fill: '#a78bfa', r: 3 }}
-                        activeDot={{ r: 5 }}
-                      />
-                      <Line 
-                        type="monotone" 
-                        dataKey="responded" 
-                        stroke="#009773" 
-                        strokeWidth={2}
-                        dot={{ fill: '#009773', r: 3 }}
-                        activeDot={{ r: 5 }}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <div className="h-[220px] flex items-center justify-center text-muted-foreground">
-                    <p>No email data available yet</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Bottom Charts */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Category Distribution Pie Chart */}
-            <Card className="border border-border/50 hover:border-primary/50 transition-all shadow-card bg-gradient-to-br from-card to-card/80">
-              <CardHeader className="pb-4 pt-6 px-6">
-                <CardTitle className="text-lg font-semibold">Category Distribution</CardTitle>
-              </CardHeader>
-              <CardContent className="px-6 pb-6">
-                {categoryData.length > 0 ? (
-                  <ResponsiveContainer width="100%" height={260}>
-                    <PieChart>
-                      <Pie
-                        data={categoryData}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={60}
-                        outerRadius={90}
-                        paddingAngle={1}
-                        dataKey="value"
-                      >
-                        {categoryData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <Tooltip 
-                        contentStyle={{
-                          backgroundColor: 'hsl(var(--card))',
-                          border: '1px solid hsl(var(--border))',
-                          borderRadius: '8px',
-                          fontSize: '11px'
-                        }}
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <div className="h-[260px] flex items-center justify-center text-muted-foreground">
-                    <p className="text-sm">No categories selected yet.</p>
-                  </div>
-                )}
-                {categoryData.length > 0 && (
-                  <div className="grid grid-cols-2 gap-2 mt-2">
+          {/* Category Distribution Pie Chart */}
+          <Card className="border border-border/50 hover:border-primary/50 transition-all shadow-card bg-gradient-to-br from-card to-card/80">
+            <CardHeader className="pb-4 pt-6 px-6">
+              <CardTitle className="text-lg font-semibold">Category Distribution</CardTitle>
+            </CardHeader>
+            <CardContent className="px-6 pb-6">
+              {categoryData.length > 0 ? (
+                <div className="flex flex-col lg:flex-row items-center gap-6">
+                  <ReactECharts 
+                    option={getCategoryChartOption()} 
+                    style={{ height: '260px', width: '260px' }}
+                    opts={{ renderer: 'svg' }}
+                  />
+                  <div className="grid grid-cols-2 gap-2 flex-1">
                     {categoryData.map((cat, index) => (
-                      <div key={index} className="flex items-center gap-2">
+                      <div key={index} className="flex items-center gap-2 p-2 rounded-lg bg-secondary/20">
                         <div 
-                          className="w-2.5 h-2.5 rounded-full" 
+                          className="w-2.5 h-2.5 rounded-full shrink-0" 
                           style={{ backgroundColor: cat.color }}
                         />
                         <span className="text-xs text-muted-foreground truncate">{cat.name}</span>
@@ -445,57 +445,14 @@ const DashboardHome = () => {
                       </div>
                     ))}
                   </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Processing Time Bar Chart */}
-            <Card className="border border-border/50 hover:border-primary/50 transition-all shadow-card bg-gradient-to-br from-card to-card/80">
-              <CardHeader className="pb-4 pt-6 px-6">
-                <CardTitle className="text-lg font-semibold">Processing Time</CardTitle>
-              </CardHeader>
-              <CardContent className="px-6 pb-6">
-                {spendingData.length > 0 ? (
-                  <ResponsiveContainer width="100%" height={260}>
-                    <BarChart data={spendingData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
-                      <XAxis 
-                        dataKey="category" 
-                        stroke="hsl(var(--muted-foreground))"
-                        fontSize={11}
-                        tickLine={false}
-                      />
-                      <YAxis 
-                        stroke="hsl(var(--muted-foreground))"
-                        fontSize={11}
-                        tickLine={false}
-                      />
-                      <Tooltip 
-                        contentStyle={{
-                          backgroundColor: 'hsl(var(--card))',
-                          border: '1px solid hsl(var(--border))',
-                          borderRadius: '8px',
-                          fontSize: '11px'
-                        }}
-                      />
-                      <Bar 
-                        dataKey="amount" 
-                        radius={[6, 6, 0, 0]}
-                      >
-                        {spendingData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <div className="h-[260px] flex items-center justify-center text-muted-foreground">
-                    <p className="text-sm">No processing data available yet.</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
+                </div>
+              ) : (
+                <div className="h-[260px] flex items-center justify-center text-muted-foreground">
+                  <p className="text-sm">No categories selected yet.</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
 
         {/* Right Sidebar - Calendar & Upcoming Meetings */}

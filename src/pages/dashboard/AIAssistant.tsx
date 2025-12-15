@@ -3,25 +3,34 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Bot, Send, Sparkles, Mail, Calendar, FileText, Zap, MessageSquare, Lightbulb, Clock } from "lucide-react";
+import { Bot, Send, Sparkles, Mail, Calendar, FileText, Lightbulb, MessageSquare, TrendingUp, BarChart3 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+
+// Sample AI insights
+const aiInsights = [
+  { text: "Peak email hours are between 9 AM and 11 AM", trend: "up" },
+  { text: "35% of your emails are follow-ups", trend: "neutral" },
+  { text: "Response rate improved by 12% this week", trend: "up" },
+];
+
+const mainInsight = "24% more emails processed this week";
 
 // Sample chat messages
 const initialMessages = [
   {
     id: 1,
     role: "assistant",
-    content: "Hello! I'm your AI assistant. I can help you with emails, scheduling, and more. What would you like to do today?",
+    content: "Hello! I'm Nyx AI, your intelligent email and productivity assistant. I can help you with drafting emails, scheduling meetings, summarizing your inbox, and more. What would you like to do today?",
     timestamp: "Just now",
   },
 ];
 
 // Quick action suggestions
 const suggestions = [
-  { icon: Mail, text: "Draft a reply to recent emails", action: "draft_reply" },
-  { icon: Calendar, text: "Schedule a meeting for next week", action: "schedule" },
-  { icon: FileText, text: "Summarize my unread emails", action: "summarize" },
-  { icon: Lightbulb, text: "Get productivity tips", action: "tips" },
+  { icon: Mail, text: "Draft a reply", action: "draft_reply" },
+  { icon: Calendar, text: "Schedule meeting", action: "schedule" },
+  { icon: FileText, text: "Summarize inbox", action: "summarize" },
+  { icon: Lightbulb, text: "Productivity tips", action: "tips" },
 ];
 
 const AIAssistant = () => {
@@ -98,145 +107,151 @@ const AIAssistant = () => {
         </Badge>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-        <Card className="border">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <Mail className="h-5 w-5 text-primary" />
-              <div>
-                <p className="text-xl font-bold">156</p>
-                <p className="text-xs text-muted-foreground">Emails drafted</p>
+      {/* Main Content - Two Column Layout */}
+      <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-6 min-h-0">
+        {/* AI Insights Card - Left Column */}
+        <Card className="lg:col-span-1 border border-border/50 hover:border-primary/50 transition-all shadow-card relative overflow-hidden bg-gradient-to-br from-card to-card/80">
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-[#009773]/5 pointer-events-none" />
+          
+          <CardHeader className="pb-4 pt-6 px-6 relative z-10">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                <Sparkles className="h-5 w-5 text-primary" />
+                AI Insights
+              </CardTitle>
+              <Badge variant="secondary" className="text-xs bg-primary/10 text-primary border-primary/20">Real-time</Badge>
+            </div>
+          </CardHeader>
+          <CardContent className="px-6 pb-6 relative z-10">
+            {mainInsight && (
+              <div className="mb-6 p-5 rounded-xl bg-gradient-to-br from-primary/10 to-[#009773]/10 border border-primary/20 relative">
+                <div className="absolute top-4 right-4">
+                  <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+                </div>
+                <p className="text-xs text-muted-foreground mb-1">This Week</p>
+                <h3 className="text-xl font-bold mb-1">{mainInsight}</h3>
+                <p className="text-xs text-muted-foreground">Compared to last week</p>
               </div>
+            )}
+
+            <div className="space-y-2">
+              {aiInsights.map((insight, index) => (
+                <div 
+                  key={index}
+                  className="flex items-start gap-3 p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors"
+                >
+                  <div className="p-1.5 rounded-lg bg-primary/10">
+                    {insight.trend === "up" ? (
+                      <TrendingUp className="h-3.5 w-3.5 text-success" />
+                    ) : (
+                      <BarChart3 className="h-3.5 w-3.5 text-primary" />
+                    )}
+                  </div>
+                  <p className="text-sm flex-1">{insight.text}</p>
+                </div>
+              ))}
             </div>
           </CardContent>
         </Card>
-        <Card className="border">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <Calendar className="h-5 w-5 text-success" />
-              <div>
-                <p className="text-xl font-bold">42</p>
-                <p className="text-xs text-muted-foreground">Meetings scheduled</p>
+
+        {/* Chat Interface - Right Column (2/3 width) */}
+        <Card className="lg:col-span-2 flex flex-col border border-border/50 min-h-0 bg-gradient-to-br from-card to-card/80">
+          <CardHeader className="pb-4 border-b border-border/50">
+            <CardTitle className="text-lg font-semibold flex items-center gap-2">
+              <div className="p-1.5 rounded-lg bg-primary/10">
+                <MessageSquare className="h-4 w-4 text-primary" />
               </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <Clock className="h-5 w-5 text-info" />
-              <div>
-                <p className="text-xl font-bold">8h</p>
-                <p className="text-xs text-muted-foreground">Time saved</p>
+              Chat with Nyx AI
+            </CardTitle>
+          </CardHeader>
+          
+          {/* Messages */}
+          <CardContent className="flex-1 overflow-y-auto p-6 space-y-4">
+            {messages.map((message) => (
+              <div
+                key={message.id}
+                className={`flex gap-3 ${message.role === 'user' ? 'flex-row-reverse' : ''}`}
+              >
+                <Avatar className="h-9 w-9 shrink-0 border border-border/50">
+                  <AvatarFallback className={message.role === 'assistant' ? 'bg-gradient-to-br from-primary to-primary/80 text-primary-foreground' : 'bg-secondary'}>
+                    {message.role === 'assistant' ? <Bot className="h-4 w-4" /> : 'U'}
+                  </AvatarFallback>
+                </Avatar>
+                <div className={`max-w-[75%] ${message.role === 'user' ? 'text-right' : ''}`}>
+                  <div
+                    className={`inline-block p-4 rounded-2xl text-sm whitespace-pre-line leading-relaxed ${
+                      message.role === 'user'
+                        ? 'bg-primary text-primary-foreground rounded-br-sm'
+                        : 'bg-secondary/50 border border-border/50 rounded-bl-sm'
+                    }`}
+                  >
+                    {message.content}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1.5 px-1">{message.timestamp}</p>
+                </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <Zap className="h-5 w-5 text-warning" />
-              <div>
-                <p className="text-xl font-bold">94%</p>
-                <p className="text-xs text-muted-foreground">Accuracy rate</p>
+            ))}
+            
+            {isTyping && (
+              <div className="flex gap-3">
+                <Avatar className="h-9 w-9 border border-border/50">
+                  <AvatarFallback className="bg-gradient-to-br from-primary to-primary/80 text-primary-foreground">
+                    <Bot className="h-4 w-4" />
+                  </AvatarFallback>
+                </Avatar>
+                <div className="bg-secondary/50 border border-border/50 p-4 rounded-2xl rounded-bl-sm">
+                  <div className="flex gap-1.5">
+                    <span className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                    <span className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                    <span className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                  </div>
+                </div>
               </div>
-            </div>
+            )}
           </CardContent>
+
+          {/* Suggestions */}
+          <div className="px-6 pb-3">
+            <div className="flex flex-wrap gap-2">
+              {suggestions.map((suggestion) => {
+                const Icon = suggestion.icon;
+                return (
+                  <Button
+                    key={suggestion.action}
+                    variant="outline"
+                    size="sm"
+                    className="text-xs bg-secondary/30 border-border/50 hover:bg-secondary/50 hover:border-primary/50"
+                    onClick={() => handleSuggestionClick(suggestion.action)}
+                  >
+                    <Icon className="h-3 w-3 mr-1.5" />
+                    {suggestion.text}
+                  </Button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Input */}
+          <div className="p-4 border-t border-border/50 bg-secondary/20">
+            <div className="flex gap-3">
+              <Input
+                placeholder="Ask Nyx AI anything..."
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+                className="flex-1 bg-background/50 border-border/50 focus:border-primary/50"
+              />
+              <Button 
+                onClick={handleSend} 
+                disabled={!input.trim()}
+                className="px-4"
+              >
+                <Send className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
         </Card>
       </div>
-
-      {/* Chat Interface */}
-      <Card className="flex-1 flex flex-col border min-h-0">
-        <CardHeader className="pb-4 border-b">
-          <CardTitle className="text-lg font-semibold flex items-center gap-2">
-            <MessageSquare className="h-5 w-5 text-primary" />
-            Chat with AI
-          </CardTitle>
-        </CardHeader>
-        
-        {/* Messages */}
-        <CardContent className="flex-1 overflow-y-auto p-4 space-y-4">
-          {messages.map((message) => (
-            <div
-              key={message.id}
-              className={`flex gap-3 ${message.role === 'user' ? 'flex-row-reverse' : ''}`}
-            >
-              <Avatar className="h-8 w-8 shrink-0">
-                <AvatarFallback className={message.role === 'assistant' ? 'bg-primary text-primary-foreground' : 'bg-secondary'}>
-                  {message.role === 'assistant' ? <Bot className="h-4 w-4" /> : 'U'}
-                </AvatarFallback>
-              </Avatar>
-              <div className={`max-w-[80%] ${message.role === 'user' ? 'text-right' : ''}`}>
-                <div
-                  className={`inline-block p-3 rounded-2xl text-sm whitespace-pre-line ${
-                    message.role === 'user'
-                      ? 'bg-primary text-primary-foreground rounded-br-none'
-                      : 'bg-secondary rounded-bl-none'
-                  }`}
-                >
-                  {message.content}
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">{message.timestamp}</p>
-              </div>
-            </div>
-          ))}
-          
-          {isTyping && (
-            <div className="flex gap-3">
-              <Avatar className="h-8 w-8">
-                <AvatarFallback className="bg-primary text-primary-foreground">
-                  <Bot className="h-4 w-4" />
-                </AvatarFallback>
-              </Avatar>
-              <div className="bg-secondary p-3 rounded-2xl rounded-bl-none">
-                <div className="flex gap-1">
-                  <span className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                  <span className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                  <span className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-                </div>
-              </div>
-            </div>
-          )}
-        </CardContent>
-
-        {/* Suggestions */}
-        <div className="px-4 pb-2">
-          <div className="flex flex-wrap gap-2">
-            {suggestions.map((suggestion) => {
-              const Icon = suggestion.icon;
-              return (
-                <Button
-                  key={suggestion.action}
-                  variant="outline"
-                  size="sm"
-                  className="text-xs"
-                  onClick={() => handleSuggestionClick(suggestion.action)}
-                >
-                  <Icon className="h-3 w-3 mr-1" />
-                  {suggestion.text}
-                </Button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Input */}
-        <div className="p-4 border-t">
-          <div className="flex gap-2">
-            <Input
-              placeholder="Ask me anything..."
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-              className="flex-1"
-            />
-            <Button onClick={handleSend} disabled={!input.trim()}>
-              <Send className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-      </Card>
     </div>
   );
 };
