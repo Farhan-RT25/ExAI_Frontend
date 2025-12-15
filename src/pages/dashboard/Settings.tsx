@@ -17,9 +17,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Upload, CreditCard, Loader2 } from "lucide-react";
+import { Upload, Loader2, Trash2, AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
   getUserProfile,
@@ -38,6 +48,7 @@ const Settings = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [user, setUser] = useState<User | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   // Profile form state
   const [fullName, setFullName] = useState("");
@@ -178,6 +189,16 @@ const Settings = () => {
     }
   };
 
+  const handleDeleteAccount = async () => {
+    // TODO: Implement actual account deletion
+    toast({
+      title: "Account Deletion",
+      description: "Account deletion request submitted. This feature is coming soon.",
+      variant: "destructive",
+    });
+    setDeleteDialogOpen(false);
+  };
+
   const getInitials = (name?: string | null, email?: string) => {
     if (name) {
       return name
@@ -226,16 +247,16 @@ const Settings = () => {
   return (
     <div className="space-y-4 md:space-y-6">
       {/* Header Card with User Info */}
-      <Card className="shadow-card border-border overflow-hidden">
-          <ProfilePattern />
-          <div className="absolute -bottom-12 left-8">
-            <Avatar className="h-24 w-24 border-4 border-background">
-              <AvatarImage src={user.profile_image_url || ""} />
-              <AvatarFallback className="bg-gradient-primary text-primary-foreground text-2xl">
-                {getInitials(user.full_name, user.email)}
-              </AvatarFallback>
-            </Avatar>
-          </div>
+      <Card className="shadow-card border-border overflow-hidden relative">
+        <ProfilePattern />
+        <div className="absolute top-20 left-8">
+          <Avatar className="h-24 w-24 border-4 border-background">
+            <AvatarImage src={user.profile_image_url || ""} />
+            <AvatarFallback className="bg-gradient-to-br from-primary to-primary/80 text-primary-foreground text-2xl">
+              {getInitials(user.full_name, user.email)}
+            </AvatarFallback>
+          </Avatar>
+        </div>
         <div className="pt-16 pb-6 px-8">
           <h2 className="text-xl font-semibold">{user.full_name || "User"}</h2>
           <p className="text-sm text-muted-foreground">{user.email}</p>
@@ -352,7 +373,7 @@ const Settings = () => {
               <div className="flex items-center gap-4">
                 <Avatar className="h-16 w-16">
                   <AvatarImage src={profileImageUrl || ""} />
-                  <AvatarFallback className="bg-gradient-primary text-primary-foreground text-xl">
+                  <AvatarFallback className="bg-gradient-to-br from-primary to-primary/80 text-primary-foreground text-xl">
                     {getInitials(user.full_name, user.email)}
                   </AvatarFallback>
                 </Avatar>
@@ -560,10 +581,41 @@ const Settings = () => {
               </div>
             </CardContent>
           </Card>
+
+          {/* Delete Account Card */}
+          <Card className="shadow-card border-destructive/50 bg-destructive/5">
+            <CardHeader className="pb-3 pt-5 px-5">
+              <CardTitle className="text-sm font-medium text-destructive flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4" />
+                Danger Zone
+              </CardTitle>
+              <CardDescription className="text-xs">
+                Irreversible actions for your account
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="px-5 pb-5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium">Delete Account</p>
+                  <p className="text-xs text-muted-foreground">
+                    Permanently delete your account and all associated data
+                  </p>
+                </div>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => setDeleteDialogOpen(true)}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete Account
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       )}
 
-      {/* Preferences Tab - Keep as is for now */}
+      {/* Preferences Tab */}
       {activeTab === "preferences" && (
         <div className="space-y-4 md:space-y-6">
           <Card className="shadow-card hover:shadow-card-hover transition-all border-border">
@@ -744,7 +796,7 @@ const Settings = () => {
         </div>
       )}
 
-      {/* Billing Tab - Keep as is for now */}
+      {/* Billing Tab */}
       {activeTab === "billing" && (
         <div className="space-y-4 md:space-y-6">
           <Card className="shadow-card hover:shadow-card-hover transition-all border-border">
@@ -773,6 +825,42 @@ const Settings = () => {
           </Card>
         </div>
       )}
+
+      {/* Delete Account Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent className="border-destructive/50">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="h-5 w-5" />
+              Are you sure?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-3">
+              <p>
+                This action cannot be undone. This will permanently delete your account and remove all your data.
+              </p>
+              <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4 space-y-2">
+                <p className="text-sm font-medium text-foreground">This will:</p>
+                <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
+                  <li>Remove all email categories from your connected accounts</li>
+                  <li>Delete all AI-generated drafts and responses</li>
+                  <li>Disconnect all email accounts</li>
+                  <li>Remove all Nyx AI features from your emails</li>
+                </ul>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteAccount}
+              className="bg-destructive hover:bg-destructive/90"
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete Account
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
